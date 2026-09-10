@@ -17,10 +17,13 @@ server:
   port: ${PORT:8080}
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
   security:
     jwt-secret: ${JWT_SECRET:ZGFuY2U3LWRldmVsb3BtZW50LXNlY3JldC1jaGFuZ2UtbWUtaW4tcHJvZHVjdGlvbi0zMmJ5dGVz}
     access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
     refresh-token-days: ${REFRESH_TOKEN_DAYS:7}
+    cookie-secure: ${COOKIE_SECURE:false}
     debug-user-enabled: ${DEBUG_USER_ENABLED:false}
 
 management:

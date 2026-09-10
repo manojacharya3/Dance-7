@@ -8,7 +8,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@RestController @RequestMapping("/api/branches") @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+@RestController @RequestMapping("/api/branches")
 public class BranchController {
     private final BranchService service;
     public BranchController(BranchService service) { this.service = service; }

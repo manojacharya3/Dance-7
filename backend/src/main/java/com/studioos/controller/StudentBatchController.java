@@ -7,7 +7,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@RestController @RequestMapping("/api/student-batches") @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+@RestController @RequestMapping("/api/student-batches")
 public class StudentBatchController {
     private final StudentBatchService service; public StudentBatchController(StudentBatchService service) { this.service = service; }
     @PostMapping public StudentBatchDTO assign(@Valid @RequestBody StudentBatchDTO dto) { return service.assign(dto); }

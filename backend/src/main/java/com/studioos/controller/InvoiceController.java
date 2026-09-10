@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-@RestController @RequestMapping("/api/invoices") @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+@RestController @RequestMapping("/api/invoices")
 public class InvoiceController {
     private final InvoiceService service;
     public InvoiceController(InvoiceService service) { this.service = service; }

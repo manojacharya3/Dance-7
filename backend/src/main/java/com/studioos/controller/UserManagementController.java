@@ -12,7 +12,6 @@ import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/admin/users")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
 public class UserManagementController {
     private final UserService service;
     public UserManagementController(UserService service) { this.service = service; }

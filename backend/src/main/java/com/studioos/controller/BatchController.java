@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-@RestController @RequestMapping("/api/batches") @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+@RestController @RequestMapping("/api/batches")
 public class BatchController {
     private final BatchService service; public BatchController(BatchService service) { this.service = service; }
     @PostMapping public ResponseEntity<BatchDTO> create(@Valid @RequestBody BatchDTO dto) { BatchDTO created = service.create(dto); return ResponseEntity.created(URI.create("/api/batches/" + created.id())).body(created); }

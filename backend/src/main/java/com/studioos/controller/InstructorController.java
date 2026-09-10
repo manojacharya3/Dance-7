@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-@RestController @RequestMapping("/api/instructors") @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001"})
+@RestController @RequestMapping("/api/instructors")
 public class InstructorController {
     private final InstructorService service; public InstructorController(InstructorService service) { this.service = service; }
     @PostMapping public ResponseEntity<InstructorDTO> create(@Valid @RequestBody InstructorDTO dto) { InstructorDTO created = service.create(dto); return ResponseEntity.created(URI.create("/api/instructors/" + created.id())).body(created); }
