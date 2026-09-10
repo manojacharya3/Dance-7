@@ -36,7 +36,7 @@ export function StudentForm({ initialStudent, submitLabel, onSubmit, branches = 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  function update(field: keyof StudentPayload, value: string | boolean) {
+  function update(field: keyof StudentPayload, value: string | number | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 

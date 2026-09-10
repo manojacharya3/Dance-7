@@ -7,7 +7,7 @@ export async function getStudentBatchMap(students: Student[]) {
       const assignments = await getStudentBatches(student.id);
       return [student.id, assignments.map((assignment) => assignment.batchId)] as const;
     } catch {
-      return [student.id, []] as const;
+      return [student.id, [] as number[]] as const;
     }
   }));
   return new Map(entries);
