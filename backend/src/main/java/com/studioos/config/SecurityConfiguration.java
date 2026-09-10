@@ -23,7 +23,7 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
-                .requestMatchers("/actuator/health", "/api/health", "/api/auth/**").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info", "/api/health", "/api/auth/**").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(roleScopeFilter, JwtAuthenticationFilter.class)
