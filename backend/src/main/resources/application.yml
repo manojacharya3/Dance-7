@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: dance7-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/studioos}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres123}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${PORT:8080}
+
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:ZGFuY2U3LWRldmVsb3BtZW50LXNlY3JldC1jaGFuZ2UtbWUtaW4tcHJvZHVjdGlvbi0zMmJ5dGVz}
+    access-token-minutes: ${ACCESS_TOKEN_MINUTES:15}
+    refresh-token-days: ${REFRESH_TOKEN_DAYS:7}
+    debug-user-enabled: ${DEBUG_USER_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Local diagnostics only. Override these levels or remove this block in production.
+logging:
+  level:
+    org.springframework.security.web.FilterChainProxy: TRACE
+    org.springframework.security.authentication: TRACE
+    org.springframework.security.authorization: TRACE
+    org.springframework.security.web.csrf: TRACE

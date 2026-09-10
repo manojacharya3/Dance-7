@@ -1,0 +1,7 @@
+export type Invoice = { id: number; tenantId: string; invoiceNumber: string; paymentId: number; studentId: number; branchId: number; amount: number; paymentMethod: string; transactionReference?: string; invoiceDate: string; status: string; createdAt?: string; updatedAt?: string };
+export type InvoicePage = { content: Invoice[]; number: number; totalElements: number; totalPages: number; first: boolean; last: boolean };
+const API = process.env.NEXT_PUBLIC_API_URL ?? "/api";
+async function request<T>(path: string, options?: RequestInit): Promise<T> { const response = await fetch(`${API}${path}`, { ...options, credentials: "include", headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) }, cache: "no-store" }); if (!response.ok) throw new Error((await response.text()) || `Request failed with status ${response.status}.`); return response.status === 204 ? (undefined as T) : response.json(); }
+export function getInvoices(search = "", branchId = 0) { const params = new URLSearchParams({ tenantId: "default", page: "0", size: "100" }); if (search.trim()) params.set("search", search.trim()); if (branchId) params.set("branchId", String(branchId)); return request<InvoicePage>(`/invoices?${params}`); }
+export function getInvoice(id: string) { return request<Invoice>(`/invoices/${id}?tenantId=default`); }
+export function generateInvoice(paymentId: number) { return request<Invoice>(`/invoices/from-payment/${paymentId}?tenantId=default`, { method: "POST" }); }

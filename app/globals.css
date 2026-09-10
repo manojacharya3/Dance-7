@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --canvas: 42 33% 97%;
+  --ink: 218 28% 16%;
+  --muted: 218 12% 46%;
+  --line: 36 19% 88%;
+  --accent: 163 48% 38%;
+  --accent-strong: 163 54% 29%;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: hsl(var(--canvas));
+  color: hsl(var(--ink));
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button, input { font: inherit; }
+
+::selection { background: hsl(var(--accent) / 0.2); }
