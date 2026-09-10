@@ -1,15 +1,12 @@
 services:
   - type: web
     name: dance7-api
-    runtime: java
+    runtime: docker
     plan: starter
     rootDir: backend
-    buildCommand: mvn -DskipTests package
-    startCommand: java -jar target/*.jar
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health
     envVars:
-      - key: JAVA_VERSION
-        value: 21
       - key: DATABASE_URL
         sync: false
       - key: DATABASE_USERNAME
