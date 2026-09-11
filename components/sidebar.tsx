@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { currentUser, type AuthUser } from "@/lib/auth";
 import { getBranches, type Branch } from "@/lib/branches";
+import { BrandLockup } from "@/components/brand";
 import { cn } from "@/lib/utils";
 
 export type NavItem = { label: string; href: string; icon: typeof Home; section: string };
@@ -71,37 +72,33 @@ export function Sidebar() {
   }));
 
   return (
-    <aside className="fixed inset-y-0 left-0 hidden w-[272px] flex-col border-r border-slate-200/80 bg-white lg:flex">
-      <Link href="/dashboard" className="flex items-center gap-3 px-6 pb-5 pt-6">
-        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-black text-white shadow-sm">
-          D7
-        </span>
-        <span>
-          <span className="block text-[17px] font-extrabold tracking-tight text-slate-900">Dance7</span>
-          <span className="block text-xs font-medium text-slate-400">The Art Factory</span>
-        </span>
-      </Link>
+    <aside className="fixed inset-y-0 left-0 hidden w-[272px] flex-col border-r border-[#1f1f1f] bg-[#0b0b0b]/95 backdrop-blur lg:flex">
+      <div className="px-5 pb-4 pt-6">
+        <BrandLockup />
+      </div>
 
-      {/* Workspace switcher */}
+      {/* Workspace switcher — premium branded header area */}
       <div className="px-4 pb-4">
-        <label className="mb-1.5 block px-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
-          Workspace
-        </label>
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 pl-3">
-          <span className="d7-avatar !h-8 !w-8 text-[11px]">{(user?.fullName || "D7").slice(0, 2).toUpperCase()}</span>
-          <select
-            aria-label="Switch workspace branch"
-            value={workspace}
-            onChange={(e) => setWorkspace(e.target.value)}
-            className="w-full bg-transparent text-sm font-semibold text-slate-800 outline-none"
-          >
-            <option value="">All branches</option>
-            {branches.map((b) => (
-              <option key={b.id} value={String(b.id)}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+        <div className="rounded-2xl border border-[#2a2a2a] bg-gradient-to-br from-[#1a1a1a] to-[#101010] p-2 pl-3">
+          <label className="mb-1 block px-1 text-[10px] font-bold uppercase tracking-[0.24em] text-[#8a8a8a]">
+            Workspace
+          </label>
+          <div className="flex items-center gap-2">
+            <span className="d7-avatar !h-8 !w-8 text-[11px]">{(user?.fullName || "D7").slice(0, 2).toUpperCase()}</span>
+            <select
+              aria-label="Switch workspace branch"
+              value={workspace}
+              onChange={(e) => setWorkspace(e.target.value)}
+              className="w-full bg-transparent text-sm font-semibold text-white outline-none"
+            >
+              <option value="">All branches</option>
+              {branches.map((b) => (
+                <option key={b.id} value={String(b.id)}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -110,7 +107,7 @@ export function Sidebar() {
           if (!items.length) return null;
           return (
             <div key={section}>
-              <p className="mb-1.5 px-2 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">{section}</p>
+              <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-[0.24em] text-[#6b6b6b]">{section}</p>
               <div className="space-y-1">
                 {items.map(({ label, href, icon: Icon }) => {
                   const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
@@ -119,12 +116,18 @@ export function Sidebar() {
                       key={href}
                       href={href}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+                        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
                         active
-                          ? "bg-violet-600 font-semibold text-white shadow-sm"
-                          : "font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                          ? "bg-[#ff1a1a] font-semibold text-white shadow-[0_0_24px_rgba(255,26,26,0.35)]"
+                          : "font-medium text-[#b3b3b3] hover:bg-white/5 hover:text-white hover:backdrop-blur"
                       )}
                     >
+                      <span
+                        className={cn(
+                          "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-[#ff1a1a] transition",
+                          active ? "opacity-100" : "opacity-0 group-hover:opacity-60"
+                        )}
+                      />
                       <Icon size={18} strokeWidth={active ? 2.4 : 1.8} />
                       {label}
                     </Link>
@@ -136,12 +139,12 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-slate-100 p-4">
-        <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
+      <div className="border-t border-[#1f1f1f] p-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-[#2a2a2a] bg-[#141414] p-3">
           <span className="d7-avatar">{(user?.fullName || "DU").slice(0, 2).toUpperCase()}</span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-slate-900">{user?.fullName || "Dance7 user"}</p>
-            <p className="truncate text-xs text-slate-400">{user?.email || "Studio workspace"}</p>
+            <p className="truncate text-sm font-bold text-white">{user?.fullName || "Dance7 user"}</p>
+            <p className="truncate text-xs text-[#8a8a8a]">{user?.email || "Studio workspace"}</p>
           </div>
         </div>
       </div>

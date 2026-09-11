@@ -3,8 +3,9 @@ import { AuthGuard } from "@/components/auth-guard";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dance7 — Studio Management",
-  description: "Modern studio management for Dance7 - The Art Factory. Students, batches, payments, attendance and reminders.",
+  title: "Dance7 — The Art Factory",
+  description: "Dance7 The Art Factory: premium studio management. Students, batches, payments, attendance and reminders.",
+  icons: { icon: "/brand/dance7-logo.jpg", apple: "/brand/dance7-logo.jpg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

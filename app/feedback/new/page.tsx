@@ -48,15 +48,15 @@ export default function NewFeedbackPage() {
       <div className="lg:pl-[272px]">
         <Navbar />
         <main className="mx-auto max-w-2xl d7-page">
-          <Link href="/feedback" className="mb-6 inline-flex items-center gap-2 text-sm text-slate-500">
+          <Link href="/feedback" className="mb-6 inline-flex items-center gap-2 text-sm text-[#b3b3b3]">
             <ArrowLeft size={16} />Back to feedback
           </Link>
-          <h1 className="text-3xl font-semibold text-slate-900">New feedback</h1>
-          <p className="mt-2 text-sm text-slate-500">Available to Branch Heads and Instructors. Owners can view all feedback.</p>
+          <h1 className="text-3xl font-semibold text-white">New feedback</h1>
+          <p className="mt-2 text-sm text-[#b3b3b3]">Available to Branch Heads and Instructors. Owners can view all feedback.</p>
 
-          {error && <p className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="mt-6 rounded-lg border border-[#ef4444]/40 bg-[#ef4444]/10 px-4 py-3 text-sm text-[#ff9999]">{error}</p>}
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-xl border border-slate-200/80 bg-white p-6">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-xl border border-[#2a2a2a] bg-[#111111] p-6">
             <div>
               <label className="mb-1 block text-sm font-semibold">Title</label>
               <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="e.g. Attendance save fails for evening batch" className="w-full rounded-lg border px-3 py-2.5 text-sm" />
@@ -93,7 +93,7 @@ export default function NewFeedbackPage() {
                 </select>
               </div>
             </div>
-            <button type="submit" disabled={saving} className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+            <button type="submit" disabled={saving} className="w-full rounded-lg bg-[#ff1a1a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
               {saving ? "Submitting…" : "Submit feedback"}
             </button>
           </form>

@@ -7,9 +7,10 @@ import { useEffect, useState } from "react";
 import { currentUser, logout, type AuthUser } from "@/lib/auth";
 import { getBranches, type Branch } from "@/lib/branches";
 import { visibleNavItems } from "@/components/sidebar";
+import { BrandLockup } from "@/components/brand";
 
 const TITLES: Record<string, string> = {
-  "/dashboard": "Studio performance",
+  "/dashboard": "Command Center",
   "/students": "Students",
   "/attendance": "Attendance",
   "/instructors": "Instructors",
@@ -49,7 +50,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-[#1f1f1f] bg-[#0b0b0b]/85 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <button
             aria-label="Open navigation menu"
@@ -59,8 +60,10 @@ export function Navbar() {
             <Menu size={20} />
           </button>
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-extrabold tracking-tight text-slate-900">{title}</p>
-            <p className="hidden text-xs text-slate-400 sm:block">Dance7 workspace · The Art Factory</p>
+            <p className="truncate text-[15px] font-extrabold uppercase tracking-[0.06em] text-white">{title}</p>
+            <p className="hidden text-[11px] font-medium uppercase tracking-[0.24em] text-[#8a8a8a] sm:block">
+              Dance7 · The Art Factory
+            </p>
           </div>
           <div className="ml-auto flex items-center gap-1.5">
             <form
@@ -71,19 +74,19 @@ export function Navbar() {
               }}
             >
               <label className="relative block">
-                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search students…"
                   aria-label="Search students"
-                  className="d7-input w-56 !bg-slate-50 pl-9"
+                  className="d7-input w-56 pl-9"
                 />
               </label>
             </form>
             <Link aria-label="Open reminders" href="/reminders" className="d7-icon-btn relative">
               <Bell size={19} />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-violet-600 ring-2 ring-white" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#ff1a1a] ring-2 ring-[#0b0b0b]" />
             </Link>
             <Link aria-label="Search students" href="/students" className="d7-icon-btn md:hidden">
               <Search size={19} />
@@ -100,28 +103,23 @@ export function Navbar() {
 
       {menuOpen && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setMenuOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-[300px] flex-col bg-white px-4 py-5 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between px-1">
-              <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-xs font-black text-white">
-                  D7
-                </span>
-                <span className="text-base font-extrabold tracking-tight text-slate-900">Dance7</span>
-              </Link>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 flex w-[300px] flex-col border-r border-[#2a2a2a] bg-[#0b0b0b] px-4 py-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between px-1">
+              <BrandLockup size="sm" onNavigate={() => setMenuOpen(false)} />
               <button aria-label="Close navigation menu" onClick={() => setMenuOpen(false)} className="d7-icon-btn">
                 <X size={19} />
               </button>
             </div>
-            <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-2 pl-3">
-              <label className="mb-1 block px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+            <div className="mb-4 rounded-2xl border border-[#2a2a2a] bg-[#141414] p-2 pl-3">
+              <label className="mb-1 block px-1 text-[10px] font-bold uppercase tracking-[0.24em] text-[#8a8a8a]">
                 Workspace
               </label>
               <select
                 aria-label="Switch workspace branch"
                 value={workspace}
                 onChange={(e) => setWorkspace(e.target.value)}
-                className="w-full bg-transparent text-sm font-semibold text-slate-800 outline-none"
+                className="w-full bg-transparent text-sm font-semibold text-white outline-none"
               >
                 <option value="">All branches</option>
                 {branches.map((b) => (
@@ -140,7 +138,9 @@ export function Navbar() {
                     href={href}
                     onClick={() => setMenuOpen(false)}
                     className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
-                      active ? "bg-violet-600 font-semibold text-white" : "font-medium text-slate-600 hover:bg-slate-100"
+                      active
+                        ? "bg-[#ff1a1a] font-semibold text-white shadow-[0_0_24px_rgba(255,26,26,0.35)]"
+                        : "font-medium text-[#b3b3b3] hover:bg-white/5 hover:text-white"
                     }`}
                   >
                     <Icon size={18} />
@@ -157,7 +157,7 @@ export function Navbar() {
       )}
 
       {/* Mobile bottom navigation */}
-      <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur lg:hidden">
+      <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-30 border-t border-[#1f1f1f] bg-[#0b0b0b]/95 backdrop-blur lg:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-5 px-2 py-1.5">
           {[
             { label: "Home", href: "/dashboard" },
@@ -173,8 +173,8 @@ export function Navbar() {
               <Link
                 key={tab.href + tab.label}
                 href={tab.href}
-                className={`flex flex-col items-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold ${
-                  active ? "text-violet-700" : "text-slate-400"
+                className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[11px] font-semibold ${
+                  active ? "text-[#ff4d4d]" : "text-[#8a8a8a]"
                 }`}
               >
                 <Icon size={20} />

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -7,6 +8,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   CreditCard,
+  Flame,
   Gauge,
   Plus,
   Receipt,
@@ -17,7 +19,7 @@ import {
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Sidebar } from "@/components/sidebar";
-import { Card, LoadingState, PageHeader, StatCard } from "@/components/ui/card";
+import { Card, LoadingState, StatCard } from "@/components/ui/card";
 import { currentUser, type AuthUser } from "@/lib/auth";
 import { getAttendance, type Attendance } from "@/lib/attendance";
 import { getBatches, getBatchStudents, type Batch, type StudentBatch } from "@/lib/batches";
@@ -32,10 +34,10 @@ import { formatCurrency } from "@/lib/currency";
 type Scope = "OWNER" | "BRANCH_HEAD" | "INSTRUCTOR" | "DEVELOPER";
 
 const SCOPE_LABEL: Record<Scope, string> = {
-  OWNER: "Owner dashboard",
-  BRANCH_HEAD: "Branch head dashboard",
-  INSTRUCTOR: "Instructor dashboard",
-  DEVELOPER: "Developer dashboard",
+  OWNER: "Owner command center",
+  BRANCH_HEAD: "Branch command center",
+  INSTRUCTOR: "Instructor command center",
+  DEVELOPER: "Developer overview",
 };
 
 export default function DashboardPage() {
@@ -189,21 +191,42 @@ export default function DashboardPage() {
       <div className="lg:pl-[272px]">
         <Navbar />
         <main className="d7-page">
-          <PageHeader
-            eyebrow={SCOPE_LABEL[scope]}
-            title={`Good ${daypart()}, ${firstName(user?.fullName)}`}
-            description="Here is what's happening across your studio today. Analytics are scoped to your current role."
-            actions={
-              <>
+          {/* Welcome banner — Dance7 command center */}
+          <section className="relative mb-6 overflow-hidden rounded-[20px] border border-[#2a2a2a] bg-gradient-to-br from-[#161616] via-[#101010] to-[#2a0808] p-6 sm:mb-8 sm:p-8">
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "radial-gradient(600px 220px at 90% 0%, rgba(255,26,26,0.22), transparent 65%)" }}
+            />
+            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <Image
+                  src="/brand/dance7-logo.jpg"
+                  alt="Dance7 — The Art Factory"
+                  width={64}
+                  height={64}
+                  priority
+                  className="rounded-full object-cover ring-2 ring-[#ff1a1a]/50 shadow-[0_0_32px_rgba(255,26,26,0.45)]"
+                />
+                <div className="min-w-0">
+                  <p className="d7-eyebrow">{SCOPE_LABEL[scope]}</p>
+                  <h1 className="d7-h1 mt-2">
+                    Good {daypart()}, {firstName(user?.fullName)}
+                  </h1>
+                  <p className="d7-sub">
+                    Dance7 · The Art Factory — everything happening across your studio, live in one place.
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <Link href="/reminders" className="d7-btn-secondary">
                   <Bell size={16} /> Open reminders
                 </Link>
                 <Link href="/students/new" className="d7-btn-primary">
                   <Plus size={16} /> Add student
                 </Link>
-              </>
-            }
-          />
+              </div>
+            </div>
+          </section>
 
           {error && (
             <p role="alert" className="d7-error mb-6">
@@ -213,48 +236,69 @@ export default function DashboardPage() {
 
           {authLoading ? (
             <Card>
-              <LoadingState label="Loading dashboard…" rows={5} />
+              <LoadingState label="Loading command center…" rows={5} />
             </Card>
           ) : scope === "DEVELOPER" ? (
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard label="Branches" value={branches.length} icon={<ClipboardCheck size={18} />} tone="violet" sub="Workspaces in scope" />
+              <StatCard label="Branches" value={branches.length} icon={<ClipboardCheck size={18} />} tone="brand" sub="Workspaces in scope" />
               <StatCard label="Open feedback" value={feedbackItems.length} icon={<Star size={18} />} tone="amber" sub="Triage in Feedback" />
               <StatCard label="Role" value="Developer" icon={<Gauge size={18} />} tone="slate" sub="Read-only operations" />
               <StatCard label="System" value="Healthy" icon={<UsersRound size={18} />} tone="emerald" sub="APIs reachable" />
             </section>
           ) : (
             <>
+              {/* Revenue summary */}
+              <section className="relative mb-4 overflow-hidden rounded-[20px] border border-[#ff1a1a]/30 bg-gradient-to-r from-[#1c0a0a] to-[#111111] p-6 sm:p-7">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-[#ff6b6b]">
+                      <Flame size={14} /> Revenue collected
+                    </p>
+                    <p className="mt-2 text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+                      {formatCurrency(revenue)}
+                    </p>
+                    <p className="mt-1.5 text-sm text-[#b3b3b3]">
+                      {paidPayments.length} paid payments · {formatCurrency(sum(pendingPaymentsList))} pending
+                      {overduePaymentsList.length ? ` · ${overduePaymentsList.length} overdue` : ""}
+                    </p>
+                  </div>
+                  <Link href="/payments/new" className="d7-btn-primary shrink-0">
+                    <Plus size={16} /> Record payment
+                  </Link>
+                </div>
+              </section>
+
               <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard label={scope === "INSTRUCTOR" ? "My students" : "Total students"} value={scopedStudents.length} icon={<UsersRound size={18} />} tone="violet" sub={`${scopedBatches.length} batches in scope`} />
-                <StatCard label="Revenue collected" value={formatCurrency(revenue)} icon={<Wallet size={18} />} tone="emerald" sub={`${paidPayments.length} paid payments`} />
+                <StatCard label={scope === "INSTRUCTOR" ? "My students" : "Students"} value={scopedStudents.length} icon={<UsersRound size={18} />} tone="brand" sub={`${scopedBatches.length} batches · ${instructors.length} instructors`} />
+                <StatCard label="Active memberships" value={activeMemberships.length} icon={<CreditCard size={18} />} tone="emerald" sub="Currently valid plans" />
                 <StatCard label="Attendance rate" value={`${attendancePct}%`} icon={<Gauge size={18} />} tone="blue" sub={`${avgScore} / 10 avg performance`} />
-                <StatCard label="Pending collection" value={formatCurrency(sum(pendingPaymentsList))} icon={<Receipt size={18} />} tone="amber" sub={`${pendingPaymentsList.length} pending · ${overduePaymentsList.length} overdue`} />
+                <StatCard label="Expiring in 30 days" value={expiringMembershipsList.length} icon={<CalendarClock size={18} />} tone="amber" sub="Needs renewal follow-up" />
               </section>
 
               <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard label="Active memberships" value={activeMemberships.length} icon={<CreditCard size={18} />} tone="emerald" sub="Currently valid plans" />
-                <StatCard label="Expiring in 30 days" value={expiringMembershipsList.length} icon={<CalendarClock size={18} />} tone="amber" sub="Needs renewal follow-up" />
+                <StatCard label="Pending collection" value={formatCurrency(sum(pendingPaymentsList))} icon={<Receipt size={18} />} tone="amber" sub={`${pendingPaymentsList.length} pending · ${overduePaymentsList.length} overdue`} />
                 <StatCard label="Attendance pending" value={attendancePendingStudents.length} icon={<ClipboardCheck size={18} />} tone="blue" sub="Students with no records" />
-                <StatCard label="Reviews pending" value={reviewsPending.length} icon={<Star size={18} />} tone="violet" sub="Records missing scores" />
+                <StatCard label="Reviews pending" value={reviewsPending.length} icon={<Star size={18} />} tone="slate" sub="Records missing scores" />
+                <StatCard label="Collection health" value={paidPayments.length && scopedPayments.length ? `${Math.round((paidPayments.length / scopedPayments.length) * 100)}%` : "—"} icon={<Wallet size={18} />} tone="emerald" sub="Paid share of payments" />
               </section>
 
               <section className="mt-4 grid gap-4 lg:grid-cols-2">
                 <Card>
                   <SectionHeading title="Needs your attention" linkHref="/reminders" linkLabel="View all" />
                   <ul className="space-y-3">
-                    <AttentionRow label="Overdue payments" value={String(overduePaymentsList.length)} hint={overduePaymentsList.slice(0, 3).map((p) => `${studentName(p.studentId, scopedStudents)} · ${formatCurrency(Number(p.amount))}`).join("  •  ") || "Nothing overdue. Nice work."} />
+                    <AttentionRow label="Overdue payments" value={String(overduePaymentsList.length)} hint={overduePaymentsList.slice(0, 3).map((p) => `${studentName(p.studentId, scopedStudents)} · ${formatCurrency(Number(p.amount))}`).join("  •  ") || "Nothing overdue. Encore-worthy."} />
                     <AttentionRow label="Memberships expiring" value={String(expiringMembershipsList.length)} hint={expiringMembershipsList.slice(0, 3).map((m) => `${studentName(m.studentId, scopedStudents)} · ${m.planName}`).join("  •  ") || "No renewals due in 30 days."} />
                     <AttentionRow label="Attendance to take" value={String(attendancePendingStudents.length)} hint={attendancePendingStudents.slice(0, 3).map((s) => `${s.firstName} ${s.lastName}`).join("  •  ") || "All students have records."} />
                   </ul>
                 </Card>
                 <Card>
-                  <SectionHeading title="Upcoming classes" linkHref="/batches" linkLabel="View batches" />
+                  <SectionHeading title="Upcoming batches" linkHref="/batches" linkLabel="View batches" />
                   <div className="space-y-3">
                     {scopedBatches.slice(0, 5).map((batch) => (
-                      <div key={batch.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-3.5">
+                      <div key={batch.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[#2a2a2a] bg-[#161616] p-3.5">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-900">{batch.batchName}</p>
-                          <p className="truncate text-xs text-slate-500">
+                          <p className="truncate text-sm font-bold text-white">{batch.batchName}</p>
+                          <p className="truncate text-xs text-[#8a8a8a]">
                             {branchName(batch.branchId, branches)} · {batch.startTime}–{batch.endTime} · Cap {batch.capacity}
                           </p>
                         </div>
@@ -262,7 +306,7 @@ export default function DashboardPage() {
                       </div>
                     ))}
                     {!scopedBatches.length && (
-                      <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-500">
+                      <p className="rounded-2xl bg-[#161616] p-5 text-sm text-[#b3b3b3]">
                         No batches assigned. Ask your branch head to assign batches.
                       </p>
                     )}
@@ -280,11 +324,11 @@ export default function DashboardPage() {
                       { href: "/payments/new", label: "Record payment", hint: "Cash, UPI, card" },
                       { href: "/memberships/new", label: "New membership", hint: "Assign a plan" },
                     ].map((a) => (
-                      <Link key={a.href} href={a.href} className="group rounded-2xl border border-slate-200 p-4 transition hover:border-violet-300 hover:bg-violet-50/50">
-                        <p className="flex items-center justify-between text-sm font-bold text-slate-900">
-                          {a.label} <ArrowRight size={16} className="text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-violet-600" />
+                      <Link key={a.href} href={a.href} className="group rounded-2xl border border-[#2a2a2a] bg-[#161616] p-4 transition hover:border-[#ff1a1a]/60 hover:bg-[#ff1a1a]/5">
+                        <p className="flex items-center justify-between text-sm font-bold text-white">
+                          {a.label} <ArrowRight size={16} className="text-[#6b6b6b] transition group-hover:translate-x-0.5 group-hover:text-[#ff4d4d]" />
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">{a.hint}</p>
+                        <p className="mt-1 text-xs text-[#8a8a8a]">{a.hint}</p>
                       </Link>
                     ))}
                   </div>
@@ -301,9 +345,9 @@ export default function DashboardPage() {
 function SectionHeading({ title, linkHref, linkLabel }: { title: string; linkHref?: string; linkLabel?: string }) {
   return (
     <div className="mb-4 flex items-center justify-between">
-      <h2 className="text-base font-extrabold tracking-tight text-slate-900">{title}</h2>
+      <h2 className="text-base font-extrabold tracking-tight text-white">{title}</h2>
       {linkHref ? (
-        <Link href={linkHref} className="inline-flex items-center gap-1 text-sm font-bold text-violet-700 hover:text-violet-800">
+        <Link href={linkHref} className="inline-flex items-center gap-1 text-sm font-bold text-[#ff6b6b] hover:text-white">
           {linkLabel} <ArrowRight size={15} />
         </Link>
       ) : null}
@@ -313,10 +357,10 @@ function SectionHeading({ title, linkHref, linkLabel }: { title: string; linkHre
 
 function AttentionRow({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
-    <li className="flex items-start justify-between gap-4 rounded-2xl border border-slate-100 p-3.5">
+    <li className="flex items-start justify-between gap-4 rounded-2xl border border-[#2a2a2a] bg-[#161616] p-3.5">
       <div className="min-w-0">
-        <p className="text-sm font-bold text-slate-900">{label}</p>
-        <p className="mt-0.5 truncate text-xs leading-5 text-slate-500">{hint}</p>
+        <p className="text-sm font-bold text-white">{label}</p>
+        <p className="mt-0.5 truncate text-xs leading-5 text-[#8a8a8a]">{hint}</p>
       </div>
       <span className="d7-pill-violet shrink-0">{value}</span>
     </li>

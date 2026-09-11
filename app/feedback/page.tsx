@@ -85,18 +85,18 @@ export default function FeedbackPage() {
         <main className="d7-page">
           <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
-              <p className="mb-2 text-sm font-semibold text-violet-700">Pilot feedback</p>
+              <p className="mb-2 text-sm font-semibold text-[#ff6b6b]">Pilot feedback</p>
               <h1 className="text-3xl font-semibold">Feedback</h1>
-              <p className="mt-2 text-sm text-slate-500">Branch heads and instructors report bugs, improvements, and feature requests here.</p>
+              <p className="mt-2 text-sm text-[#b3b3b3]">Branch heads and instructors report bugs, improvements, and feature requests here.</p>
             </div>
-            <Link href="/feedback/new" className="flex w-fit items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">
+            <Link href="/feedback/new" className="flex w-fit items-center gap-2 rounded-lg bg-[#ff1a1a] px-4 py-2.5 text-sm font-semibold text-white">
               <Plus size={17} />New feedback
             </Link>
           </div>
 
-          <div className="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 lg:flex-row">
+          <div className="mb-6 flex flex-col gap-3 rounded-xl border border-[#2a2a2a] bg-[#111111] p-4 lg:flex-row">
             <div className="relative flex-1">
-              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a8a8a]" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -118,33 +118,33 @@ export default function FeedbackPage() {
             </select>
           </div>
 
-          {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+          {error && <p className="mb-4 rounded-lg border border-[#ef4444]/40 bg-[#ef4444]/10 px-4 py-3 text-sm text-[#ff9999]">{error}</p>}
 
-          <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white">
+          <div className="overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#111111]">
             {loading ? (
-              <p className="p-6 text-sm text-slate-500">Loading feedback…</p>
+              <p className="p-6 text-sm text-[#b3b3b3]">Loading feedback…</p>
             ) : items.length === 0 ? (
               <div className="flex flex-col items-center gap-3 p-10 text-center">
-                <MessageSquarePlus size={28} className="text-slate-400" />
+                <MessageSquarePlus size={28} className="text-[#8a8a8a]" />
                 <p className="text-sm font-semibold">No feedback yet</p>
-                <p className="text-sm text-slate-500">Be the first to report an issue or request a feature.</p>
-                <Link href="/feedback/new" className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white">Submit feedback</Link>
+                <p className="text-sm text-[#b3b3b3]">Be the first to report an issue or request a feature.</p>
+                <Link href="/feedback/new" className="rounded-lg bg-[#ff1a1a] px-4 py-2 text-sm font-semibold text-white">Submit feedback</Link>
               </div>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-[#222222]">
                 {items.map((item) => (
                   <li key={item.id} className="p-5">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-full bg-[#eef4f2] px-2.5 py-1 font-semibold text-violet-700">{item.category.replace("_", " ")}</span>
+                      <span className="rounded-full bg-[#eef4f2] px-2.5 py-1 font-semibold text-[#ff6b6b]">{item.category.replace("_", " ")}</span>
                       <span className="rounded-full bg-[#fff4d6] px-2.5 py-1 font-semibold text-[#8a6d00]">{item.priority}</span>
-                      <span className="rounded-full bg-violet-600 px-2.5 py-1 font-semibold text-white">{item.status.replace("_", " ")}</span>
-                      <span className="text-slate-400">{branchMap.get(item.branchId) ?? `Branch #${item.branchId}`} · {item.createdBy}</span>
+                      <span className="rounded-full bg-[#ff1a1a] px-2.5 py-1 font-semibold text-white">{item.status.replace("_", " ")}</span>
+                      <span className="text-[#8a8a8a]">{branchMap.get(item.branchId) ?? `Branch #${item.branchId}`} · {item.createdBy}</span>
                     </div>
-                    <h2 className="mt-2 text-base font-semibold text-slate-900">{item.title}</h2>
+                    <h2 className="mt-2 text-base font-semibold text-white">{item.title}</h2>
                     <p className="mt-1 text-sm text-[#4b5560]">{item.description}</p>
                     {(item.internalNotes || canTriage) && (
-                      <div className="mt-3 rounded-lg bg-slate-50 p-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Internal notes</p>
+                      <div className="mt-3 rounded-lg bg-[#161616] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8a8a8a]">Internal notes</p>
                         {item.internalNotes && notesDrafts[item.id] === undefined && (
                           <p className="mt-1 text-sm text-[#4b5560]">{item.internalNotes}</p>
                         )}
@@ -160,7 +160,7 @@ export default function FeedbackPage() {
                             <button
                               onClick={() => handleNotes(item)}
                               disabled={savingNotes === item.id}
-                              className="w-fit rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                              className="w-fit rounded-lg bg-[#ff1a1a] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
                             >
                               {savingNotes === item.id ? "Saving..." : "Save notes"}
                             </button>

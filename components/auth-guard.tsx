@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { currentUser } from "@/lib/auth";
@@ -22,6 +23,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => { active = false; };
   }, [pathname, protectedPath, router]);
 
-  if (checking) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">Checking your Dance7 session...</div>;
+  if (checking) return <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#080808] px-6"><Image src="/brand/dance7-logo.jpg" alt="Dance7 — The Art Factory" width={64} height={64} className="rounded-full object-cover ring-1 ring-white/20" /><p className="text-sm font-medium text-[#b3b3b3]">Checking your Dance7 session...</p></div>;
   return children;
 }

@@ -163,11 +163,11 @@ export default function UsersAdminPage() {
         <main className="d7-page">
           <div className="mb-8 flex items-end justify-between">
             <div>
-              <p className="mb-2 text-sm font-semibold text-violet-700">
+              <p className="mb-2 text-sm font-semibold text-[#ff6b6b]">
                 Administration
               </p>
               <h1 className="text-3xl font-semibold">Users</h1>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-[#b3b3b3]">
                 Manage user access, roles, branches, and instructor links.
               </p>
             </div>
@@ -177,7 +177,7 @@ export default function UsersAdminPage() {
                   setEditing(null);
                   setShowForm(true);
                 }}
-                className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white"
+                className="flex items-center gap-2 rounded-lg bg-[#ff1a1a] px-4 py-2.5 text-sm font-semibold text-white"
               >
                 <Plus size={17} />
                 Create user
@@ -185,7 +185,7 @@ export default function UsersAdminPage() {
             )}
           </div>
           {error && (
-            <p className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">
+            <p className="mb-6 rounded-lg bg-[#ef4444]/10 p-4 text-sm text-[#ff9999]">
               {error}
             </p>
           )}
@@ -197,7 +197,7 @@ export default function UsersAdminPage() {
           <div className="mb-4 flex items-center gap-3">
             <label
               htmlFor="user-status-filter"
-              className="text-sm font-medium text-slate-700"
+              className="text-sm font-medium text-[#e5e5e5]"
             >
               Status
             </label>
@@ -214,9 +214,9 @@ export default function UsersAdminPage() {
               <option value="ALL">All</option>
             </select>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-[#2a2a2a] bg-[#111111]">
             <table className="w-full min-w-[850px] text-left">
-              <thead className="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-400">
+              <thead className="bg-[#161616] text-xs uppercase tracking-[0.12em] text-[#8a8a8a]">
                 <tr>
                   <th className="px-5 py-3">Name</th>
                   <th className="px-5 py-3">Email</th>
@@ -228,12 +228,12 @@ export default function UsersAdminPage() {
               </thead>
               <tbody>
                 {visibleUsers.map((user) => (
-                  <tr key={user.id} className="border-t border-slate-100">
+                  <tr key={user.id} className="border-t border-[#222222]">
                     <td className="px-5 py-4 font-semibold">{user.fullName}</td>
                     <td className="px-5 py-4 text-sm">{user.email}</td>
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center gap-1 text-sm">
-                        <Shield size={14} className="text-violet-700" />
+                        <Shield size={14} className="text-[#ff6b6b]" />
                         {user.role}
                       </span>
                     </td>
@@ -246,7 +246,7 @@ export default function UsersAdminPage() {
                     </td>
                     <td className="px-5 py-4">
                       {readOnly ? (
-                        <span className="text-sm text-slate-400">—</span>
+                        <span className="text-sm text-[#8a8a8a]">—</span>
                       ) : (
                         <div className="flex gap-3">
                           <button
@@ -255,7 +255,7 @@ export default function UsersAdminPage() {
                               setShowForm(true);
                             }}
                             aria-label="Edit user"
-                            className="text-violet-700"
+                            className="text-[#ff6b6b]"
                           >
                             <Pencil size={16} />
                           </button>
@@ -263,7 +263,7 @@ export default function UsersAdminPage() {
                           <button
                             onClick={() => requestDelete(user)}
                             aria-label="Disable user"
-                            className="text-red-700"
+                            className="text-[#ff9999]"
                           >
                             <UserX size={16} />
                           </button>
@@ -271,7 +271,7 @@ export default function UsersAdminPage() {
                           <button
                             onClick={() => requestRemove(user)}
                             aria-label="Remove user"
-                            className="text-red-700"
+                            className="text-[#ff9999]"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -284,16 +284,16 @@ export default function UsersAdminPage() {
               </tbody>
             </table>
             {!visibleUsers.length && (
-              <p className="p-8 text-center text-sm text-slate-500">
+              <p className="p-8 text-center text-sm text-[#b3b3b3]">
                 No users match this filter.
               </p>
             )}
           </div>
           {showForm && (
-            <div className="fixed inset-0 z-10 flex items-center justify-center bg-violet-600/40 p-6">
+            <div className="fixed inset-0 z-10 flex items-center justify-center bg-[#ff1a1a]/40 p-6">
               <form
                 onSubmit={save}
-                className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6"
+                className="w-full max-w-lg space-y-4 rounded-2xl bg-[#111111] p-6"
               >
                 <h2 className="text-xl font-semibold">
                   {editing ? "Edit user" : "Create user"}
@@ -367,7 +367,7 @@ export default function UsersAdminPage() {
                   >
                     Cancel
                   </button>
-                  <button className="rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">
+                  <button className="rounded-lg bg-[#ff1a1a] px-4 py-2.5 text-sm font-semibold text-white">
                     Save user
                   </button>
                 </div>
@@ -376,29 +376,29 @@ export default function UsersAdminPage() {
           )}
           {confirmUser && (
             <div
-              className="fixed inset-0 z-10 flex items-center justify-center bg-violet-600/40 p-6"
+              className="fixed inset-0 z-10 flex items-center justify-center bg-[#ff1a1a]/40 p-6"
               role="dialog"
               aria-modal="true"
               aria-labelledby="confirm-user-deletion-title"
             >
-              <div className="w-full max-w-md rounded-2xl bg-white p-6">
+              <div className="w-full max-w-md rounded-2xl bg-[#111111] p-6">
                 <h2
                   id="confirm-user-deletion-title"
                   className="text-xl font-semibold"
                 >
                   Confirm User Deletion
                 </h2>
-                <p className="mt-3 text-sm text-slate-700">
+                <p className="mt-3 text-sm text-[#e5e5e5]">
                   Are you sure you want to delete/disable this user?
                 </p>
-                <div className="mt-4 rounded-lg bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <div className="mt-4 rounded-lg bg-[#161616] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8a8a8a]">
                     User
                   </p>
                   <p className="mt-1 text-sm font-semibold">
                     {confirmUser.fullName}
                   </p>
-                  <p className="text-sm text-slate-700">{confirmUser.email}</p>
+                  <p className="text-sm text-[#e5e5e5]">{confirmUser.email}</p>
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
                   <button
@@ -423,29 +423,29 @@ export default function UsersAdminPage() {
           )}
           {removeUser && (
             <div
-              className="fixed inset-0 z-10 flex items-center justify-center bg-violet-600/40 p-6"
+              className="fixed inset-0 z-10 flex items-center justify-center bg-[#ff1a1a]/40 p-6"
               role="dialog"
               aria-modal="true"
               aria-labelledby="permanently-remove-user-title"
             >
-              <div className="w-full max-w-md rounded-2xl bg-white p-6">
+              <div className="w-full max-w-md rounded-2xl bg-[#111111] p-6">
                 <h2
                   id="permanently-remove-user-title"
                   className="text-xl font-semibold"
                 >
                   Permanently Remove User
                 </h2>
-                <p className="mt-3 text-sm text-slate-700">
+                <p className="mt-3 text-sm text-[#e5e5e5]">
                   This action cannot be undone.
                 </p>
-                <div className="mt-4 rounded-lg bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                <div className="mt-4 rounded-lg bg-[#161616] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8a8a8a]">
                     User
                   </p>
                   <p className="mt-1 text-sm font-semibold">
                     {removeUser.fullName}
                   </p>
-                  <p className="text-sm text-slate-700">{removeUser.email}</p>
+                  <p className="text-sm text-[#e5e5e5]">{removeUser.email}</p>
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
                   <button
