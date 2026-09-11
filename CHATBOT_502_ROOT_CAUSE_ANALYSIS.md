@@ -76,5 +76,5 @@ call) and any JPA turn during a Neon cold start (unbounded pool wait).
 
 ## Commit / push
 
-- Commit: "Harden Dance7 AI chat: timeouts, graceful fallback, intent fixes" (see log).
-- Push: `origin/main` (manojacharya3/Dance-7) — synced.
+- Commit: "Harden Dance7 AI chat: timeouts, graceful fallback, intent fixes" (`7772cf2`).
+- Push: `origin/main` (manojacharya3/Dance-7) — ✅ synced.
