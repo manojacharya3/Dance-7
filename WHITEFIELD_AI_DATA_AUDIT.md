@@ -56,7 +56,7 @@ exist only in migration seed data, admin-editable, effective next turn).
 
 ## 4. Validation
 
-- `mvn test` ✅ — 10 tests, 0 failures (covers JOIN split, CLARIFY signals,
+- `mvn test` ✅ — 9 tests, 0 failures (covers JOIN split, CLARIFY signals,
   fallback sentence, intent matrix, guardrails).
 - `mvn compile` ✅ — BUILD SUCCESS (via test run).
 - `npm run build` ✅ — 28/28 pages, `/admin/ai*` routes generated.

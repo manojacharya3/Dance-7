@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Sidebar } from "@/components/sidebar";
 import { Card, LoadingState, PageHeader, StatCard } from "@/components/ui/card";
-import { aiAdmin, getBranches, type Analytics, type BranchOption } from "@/lib/ai-chat";
+import { aiAdmin, getBranches, type Analytics, type BranchOption, type Diagnostics } from "@/lib/ai-chat";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -24,6 +24,7 @@ export default function AiAdminPage() {
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [branch, setBranch] = useState("whitefield");
   const [data, setData] = useState<Analytics | null>(null);
+  const [diag, setDiag] = useState<Diagnostics | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -31,8 +32,10 @@ export default function AiAdminPage() {
   }, []);
   useEffect(() => {
     setData(null);
+    setDiag(null);
     setError("");
     aiAdmin.analytics(branch).then(setData).catch((e) => setError(e instanceof Error ? e.message : "Unable to load analytics."));
+    aiAdmin.diagnostics(branch).then(setDiag).catch(() => undefined);
   }, [branch]);
 
   return (
@@ -55,6 +58,19 @@ export default function AiAdminPage() {
         }
       />
       {error && <p className="d7-error mb-6">{error}</p>}
+      {diag && (
+        <Card className="mb-4">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <span className="font-extrabold text-white">Data check · {diag.branchName} (id {diag.branchId})</span>
+            <span className="text-[#8a8a8a]">dataset: {diag.datasetVersion ?? "not seeded"}</span>
+            {Object.entries(diag.counts).map(([k, v]) => (
+              <span key={k} className={v === 0 && k !== "offers" && k !== "leads" && k !== "conversations" ? "font-bold text-[#ff8080]" : "text-[#b3b3b3]"}>
+                {k}: {v}
+              </span>
+            ))}
+          </div>
+        </Card>
+      )}
       {!data ? (
         <Card><LoadingState label="Loading analytics…" rows={4} /></Card>
       ) : (

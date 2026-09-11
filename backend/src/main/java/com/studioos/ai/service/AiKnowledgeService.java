@@ -14,7 +14,9 @@ import com.studioos.ai.model.AiClass;
 import com.studioos.ai.model.AiClassSchedule;
 import com.studioos.ai.model.AiPackage;
 import com.studioos.ai.model.AiStudioSetting;
+import com.studioos.ai.repository.AiChatConversationRepository;
 import com.studioos.ai.repository.AiChatFaqRepository;
+import com.studioos.ai.repository.AiChatLeadRepository;
 import com.studioos.ai.repository.AiChatOfferRepository;
 import com.studioos.ai.repository.AiChatPolicyRepository;
 import com.studioos.ai.repository.AiClassRepository;
@@ -38,12 +40,43 @@ public class AiKnowledgeService {
     private final AiChatFaqRepository faqs;
     private final AiChatPolicyRepository policies;
     private final AiChatOfferRepository offers;
+    private final AiChatLeadRepository leadCounts;
+    private final AiChatConversationRepository conversationCounts;
 
     public AiKnowledgeService(AiBranchContext ctx, AiClassRepository classes, AiClassScheduleRepository schedules,
         AiPackageRepository packages, AiStudioSettingRepository settings, AiChatFaqRepository faqs,
-        AiChatPolicyRepository policies, AiChatOfferRepository offers) {
+        AiChatPolicyRepository policies, AiChatOfferRepository offers,
+        AiChatLeadRepository leadCounts, AiChatConversationRepository conversationCounts) {
         this.ctx = ctx; this.classes = classes; this.schedules = schedules; this.packages = packages;
         this.settings = settings; this.faqs = faqs; this.policies = policies; this.offers = offers;
+        this.leadCounts = leadCounts; this.conversationCounts = conversationCounts;
+    }
+
+    /** Staff diagnostics: proves which branch the admin screen resolved and what it holds. */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> diagnostics(String tenant, String branch) {
+        Branch b = ctx.resolve(tenant, branch);
+        String t = b.getTenantId();
+        Long id = b.getId();
+        java.util.Map<String, Object> counts = new java.util.LinkedHashMap<>();
+        counts.put("classes", classes.findByTenantIdAndBranchIdOrderByNameAsc(t, id).size());
+        counts.put("schedules", schedules.findByTenantIdAndBranchIdOrderByDayOfWeekAscStartTimeAsc(t, id).size());
+        counts.put("packages", packages.findByTenantIdAndBranchIdOrderByFeeAmountAsc(t, id).size());
+        counts.put("settings", settings.findByTenantIdAndBranchIdOrderBySettingKeyAsc(t, id).size());
+        counts.put("faqs", faqs.findByTenantIdAndBranchIdOrderBySortOrderAscIdAsc(t, id).size());
+        counts.put("policies", policies.findByTenantIdAndBranchIdOrderByTitleAsc(t, id).size());
+        counts.put("offers", offers.findByTenantIdAndBranchIdOrderByValidUntilAsc(t, id).size());
+        counts.put("leads", leadCounts.countByTenantIdAndBranchId(t, id));
+        counts.put("conversations", conversationCounts.countByTenantIdAndBranchId(t, id));
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("tenant", t);
+        out.put("branchId", id);
+        out.put("branchName", b.getName());
+        out.put("branchActive", b.isActive());
+        out.put("datasetVersion", settings.findByTenantIdAndBranchIdAndSettingKey(t, id, "dataset_version")
+            .map(s -> s.getSettingValue()).orElse(null));
+        out.put("counts", counts);
+        return out;
     }
 
     // ---- classes ----

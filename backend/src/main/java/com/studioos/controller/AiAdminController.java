@@ -123,4 +123,9 @@ public class AiAdminController {
 
     // ---- analytics ----
     @GetMapping("/analytics") public AnalyticsDto analytics(@RequestParam String branch) { return analytics.summary("default", branch); }
+
+    // ---- diagnostics ----
+    @GetMapping("/diagnostics") public java.util.Map<String, Object> diagnostics(@RequestParam String branch) {
+        return knowledge.diagnostics("default", branch);
+    }
 }

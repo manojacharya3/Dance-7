@@ -23,7 +23,24 @@ public class AiChatSchemaMigration implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        jdbc.execute("CREATE TABLE IF NOT EXISTS ai_classes (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, name VARCHAR(160) NOT NULL, category VARCHAR(60), min_age INT, max_age INT, experience_level VARCHAR(40), description VARCHAR(2000), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        try {
+            createTables();
+        } catch (Exception e) {
+            // DDL must never prevent boot: the chat degrades gracefully.
+            log.error("Dance7 AI table creation failed; continuing boot without AI tables.", e);
+            return;
+        }
+        try {
+            seedWhitefield();
+        } catch (Exception e) {
+            // Seed data must never prevent boot: the chat degrades gracefully and
+            // knowledge can be entered via admin CRUD.
+            log.error("Dance7 AI seed failed; continuing boot without seed data.", e);
+        }
+    }
+
+    private void createTables() {
+        jdbc.execute("CREATE TABLE IF NOT EXISTS ai_classes (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, name VARCHAR(160) NOT NULL, category VARCHAR(60), min_age INT, max_age INT, experience_level VARCHAR(40), fee_amount NUMERIC(12,2), description VARCHAR(2000), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_class_schedules (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, ai_class_id BIGINT NOT NULL, day_of_week VARCHAR(20) NOT NULL, start_time VARCHAR(10) NOT NULL, end_time VARCHAR(10) NOT NULL, batch_label VARCHAR(160), instructor_name VARCHAR(160), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_packages (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, name VARCHAR(160) NOT NULL, duration_months INT, fee_amount NUMERIC(12,2), admission_fee NUMERIC(12,2), description VARCHAR(2000), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_studio_settings (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, setting_key VARCHAR(120) NOT NULL, setting_value VARCHAR(2000) NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE (tenant_id, branch_id, setting_key))");
@@ -37,19 +54,15 @@ public class AiChatSchemaMigration implements CommandLineRunner {
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_chat_audit (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT, conversation_id BIGINT, event VARCHAR(60) NOT NULL, detail VARCHAR(500), ip_hash VARCHAR(128), created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         // Class-level fee (spec: each class carries its own fee).
         jdbc.execute("ALTER TABLE ai_classes ADD COLUMN IF NOT EXISTS fee_amount NUMERIC(12,2)");
+        // Deduplicate settings first: earlier seed attempts may have left duplicate
+        // (tenant, branch, key) rows, which would make the unique index below fail.
+        jdbc.execute("DELETE FROM ai_studio_settings a USING ai_studio_settings b "
+            + "WHERE a.id < b.id AND a.tenant_id = b.tenant_id AND a.branch_id = b.branch_id AND a.setting_key = b.setting_key");
         // The ON CONFLICT seed below needs this constraint even when Hibernate
         // (ddl-auto:update) created the table first without it — otherwise Postgres
         // raises 42P10, the runner throws, Spring Boot fails to start, and the
         // platform proxy returns 502 "Application failed to respond" for everything.
         jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_ai_studio_settings_tenant_branch_key ON ai_studio_settings (tenant_id, branch_id, setting_key)");
-
-        try {
-            seedWhitefield();
-        } catch (Exception e) {
-            // Seed data must never prevent boot: the chat degrades gracefully and
-            // knowledge can be entered via admin CRUD.
-            log.error("Dance7 AI seed failed; continuing boot without seed data.", e);
-        }
     }
 
     /**
@@ -78,7 +91,18 @@ public class AiChatSchemaMigration implements CommandLineRunner {
         } catch (Exception e) {
             current = null;
         }
-        if (DATASET_VERSION.equals(current)) return;
+        if (DATASET_VERSION.equals(current)) {
+            // Version matches but knowledge may still be empty (partial seed or manual
+            // wipe): reseed to self-heal instead of leaving the chatbot with no data.
+            Long classCount = jdbc.queryForObject("SELECT COUNT(*) FROM ai_classes WHERE branch_id = ?",
+                Long.class, branchId);
+            if (classCount != null && classCount > 0) {
+                log.info("Dance7 AI dataset {} already present for Whitefield branch {}.", DATASET_VERSION, branchId);
+                return;
+            }
+            log.warn("Dance7 AI dataset {} marked but knowledge empty for Whitefield branch {}; reseeding.",
+                DATASET_VERSION, branchId);
+        }
 
         // Replace AI knowledge for this branch only. Leads, conversations, messages
         // and audit rows are user data and are never touched.

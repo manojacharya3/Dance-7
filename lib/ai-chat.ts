@@ -71,6 +71,15 @@ export type Analytics = {
   leadsByStatus: { status: string; count: number }[];
 };
 
+export type Diagnostics = {
+  tenant: string;
+  branchId: number;
+  branchName: string;
+  branchActive: boolean;
+  datasetVersion: string | null;
+  counts: Record<string, number>;
+};
+
 export type ChatLead = {
   id: number;
   branchId: number;
@@ -94,6 +103,7 @@ function admin<T>(url: string, options?: RequestInit) {
 
 export const aiAdmin = {
   analytics: (branch: string) => admin<Analytics>(`${ADMIN}/analytics?branch=${encodeURIComponent(branch)}`),
+  diagnostics: (branch: string) => admin<Diagnostics>(`${ADMIN}/diagnostics?branch=${encodeURIComponent(branch)}`),
   list: <T>(resource: string, branch: string) =>
     admin<T[]>(`${ADMIN}/${resource}?branch=${encodeURIComponent(branch)}`),
   save: <T>(resource: string, payload: unknown) =>
