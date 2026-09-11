@@ -63,5 +63,5 @@ exist only in migration seed data, admin-editable, effective next turn).
 
 ## 5. Commit / push
 
-- Commit: "Complete Whitefield chatbot knowledge base" (see `git log`).
-- Push: `origin/main` (manojacharya3/Dance-7) — synced.
+- Commit: "Complete Whitefield chatbot knowledge base" (`21f2e49`).
+- Push: `origin/main` (manojacharya3/Dance-7) — ✅ synced.
