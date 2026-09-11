@@ -23,8 +23,14 @@ public class Feedback {
 
     public enum Category {
         BUG,
+        UI_ISSUE,
+        MOBILE_ISSUE,
+        PERFORMANCE,
+        CHATBOT,
+        PAYMENT,
         IMPROVEMENT,
-        FEATURE_REQUEST
+        FEATURE_REQUEST,
+        OTHER
     }
 
     public enum Priority {

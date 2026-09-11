@@ -1,13 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowLeft, ImagePlus, Loader2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Sidebar } from "@/components/sidebar";
 import { getBranches, type Branch } from "@/lib/branches";
-import { createFeedback, type FeedbackCategory, type FeedbackPriority } from "@/lib/feedback";
+import {
+  MAX_SCREENSHOTS,
+  createFeedback,
+  uploadScreenshot,
+  validateScreenshot,
+  type FeedbackCategory,
+  type FeedbackPriority,
+} from "@/lib/feedback";
+
+const CATEGORIES: FeedbackCategory[] = ["BUG", "UI_ISSUE", "MOBILE_ISSUE", "PERFORMANCE", "CHATBOT", "PAYMENT", "IMPROVEMENT", "FEATURE_REQUEST", "OTHER"];
+
+type PendingFile = { file: File; preview: string; progress: number; error?: string };
 
 export default function NewFeedbackPage() {
   const router = useRouter();
@@ -19,10 +30,36 @@ export default function NewFeedbackPage() {
   const [branchId, setBranchId] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [files, setFiles] = useState<PendingFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getBranches().then(setBranches).catch((e) => setError(e instanceof Error ? e.message : "Unable to load branches."));
   }, []);
+
+  useEffect(() => () => files.forEach((f) => URL.revokeObjectURL(f.preview)), [files]);
+
+  function pickFiles(list: FileList | null) {
+    if (!list) return;
+    setFiles((current) => {
+      const next = [...current];
+      for (const file of Array.from(list)) {
+        if (next.length >= MAX_SCREENSHOTS) break;
+        const problem = validateScreenshot(file);
+        next.push({ file, preview: URL.createObjectURL(file), progress: 0, error: problem ?? undefined });
+      }
+      return next;
+    });
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  function removeFile(index: number) {
+    setFiles((current) => {
+      URL.revokeObjectURL(current[index].preview);
+      return current.filter((_, i) => i !== index);
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,14 +68,33 @@ export default function NewFeedbackPage() {
       return;
     }
     setSaving(true);
+    setUploading(false);
     setError("");
     try {
-      await createFeedback({ tenantId: "default", title: title.trim(), description: description.trim(), category, priority, branchId });
+      const created = await createFeedback({ tenantId: "default", title: title.trim(), description: description.trim(), category, priority, branchId });
+      const valid = files.filter((f) => !f.error);
+      if (valid.length) {
+        setUploading(true);
+        const results = await Promise.all(
+          valid.map((entry) =>
+            uploadScreenshot(created.id, entry.file, (percent) =>
+              setFiles((current) => current.map((c) => (c.preview === entry.preview ? { ...c, progress: percent } : c)))
+            ).catch((err) => ({ failed: true as const, message: err instanceof Error ? err.message : "Upload failed." }))
+          )
+        );
+        const failed = results.filter((r) => typeof r === "object" && "failed" in r).length;
+        if (failed === valid.length) {
+          setError("Feedback saved, but screenshot uploads failed. You can retry from the feedback list.");
+          return;
+        }
+        if (failed > 0) setError(`Feedback saved, but ${failed} screenshot(s) failed to upload.`);
+      }
       router.push("/feedback");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to submit feedback.");
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   }
 
@@ -69,9 +125,9 @@ export default function NewFeedbackPage() {
               <div>
                 <label className="mb-1 block text-sm font-semibold">Category</label>
                 <select value={category} onChange={(e) => setCategory(e.target.value as FeedbackCategory)} className="w-full rounded-lg border px-3 py-2.5 text-sm">
-                  <option value="BUG">BUG</option>
-                  <option value="IMPROVEMENT">IMPROVEMENT</option>
-                  <option value="FEATURE_REQUEST">FEATURE_REQUEST</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c.replace(/_/g, " ")}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -93,8 +149,58 @@ export default function NewFeedbackPage() {
                 </select>
               </div>
             </div>
-            <button type="submit" disabled={saving} className="w-full rounded-lg bg-[#ff1a1a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-              {saving ? "Submitting…" : "Submit feedback"}
+            <div>
+              <label className="mb-1 block text-sm font-semibold">
+                Screenshots <span className="font-normal text-[#8a8a8a]">(optional, up to {MAX_SCREENSHOTS}, PNG/JPG/WEBP, 10 MB each)</span>
+              </label>
+              <input
+                ref={fileInput}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                onChange={(e) => pickFiles(e.target.files)}
+                className="hidden"
+                aria-label="Attach screenshots"
+              />
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={files.length >= MAX_SCREENSHOTS}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[#3a3a3a] bg-[#161616] px-4 py-4 text-sm font-semibold text-[#e5e5e5] transition hover:border-[#ff1a1a]/60 disabled:opacity-50"
+              >
+                <ImagePlus size={17} className="text-[#ff6b6b]" />
+                {files.length >= MAX_SCREENSHOTS ? "Screenshot limit reached" : "Add screenshots from gallery or camera"}
+              </button>
+              {files.length > 0 && (
+                <ul className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  {files.map((entry, i) => (
+                    <li key={entry.preview} className="relative overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#161616]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={entry.preview} alt={entry.file.name} className="h-20 w-full object-cover" />
+                      <p className="truncate px-1.5 py-1 text-[10px] text-[#b3b3b3]">{entry.file.name}</p>
+                      {entry.error ? (
+                        <p className="px-1.5 pb-1.5 text-[10px] font-semibold text-[#ff8080]">{entry.error}</p>
+                      ) : uploading || entry.progress > 0 ? (
+                        <div className="mx-1.5 mb-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+                          <div className="h-full rounded-full bg-[#ff1a1a] transition-all" style={{ width: `${entry.progress}%` }} />
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${entry.file.name}`}
+                        onClick={() => removeFile(i)}
+                        className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white hover:bg-[#ff1a1a]"
+                      >
+                        <X size={13} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button type="submit" disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#ff1a1a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+              {saving && <Loader2 size={15} className="animate-spin" />}
+              {saving ? (uploading ? "Uploading screenshots…" : "Submitting…") : "Submit feedback"}
             </button>
           </form>
         </main>

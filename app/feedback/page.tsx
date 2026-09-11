@@ -1,16 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquarePlus, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Expand, Loader2, MessageSquarePlus, Paperclip, Plus, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Sidebar } from "@/components/sidebar";
 import { getBranches, type Branch } from "@/lib/branches";
 import { currentUser, type AuthUser } from "@/lib/auth";
-import { getFeedbackList, updateFeedbackNotes, updateFeedbackStatus, type Feedback, type FeedbackStatus } from "@/lib/feedback";
+import {
+  attachmentUrl,
+  deleteAttachment,
+  getFeedbackList,
+  listAttachments,
+  updateFeedbackNotes,
+  updateFeedbackStatus,
+  type Feedback,
+  type FeedbackAttachment,
+  type FeedbackStatus,
+} from "@/lib/feedback";
 
 const STATUSES: Array<"" | FeedbackStatus> = ["", "OPEN", "IN_PROGRESS", "RESOLVED"];
-const CATEGORIES = ["", "BUG", "IMPROVEMENT", "FEATURE_REQUEST"];
+const CATEGORIES = ["", "BUG", "UI_ISSUE", "MOBILE_ISSUE", "PERFORMANCE", "CHATBOT", "PAYMENT", "IMPROVEMENT", "FEATURE_REQUEST", "OTHER"];
 
 export default function FeedbackPage() {
   const [items, setItems] = useState<Feedback[]>([]);
@@ -23,6 +33,9 @@ export default function FeedbackPage() {
   const [me, setMe] = useState<AuthUser | null>(null);
   const [notesDrafts, setNotesDrafts] = useState<Record<number, string>>({});
   const [savingNotes, setSavingNotes] = useState<number | null>(null);
+  const [galleries, setGalleries] = useState<Record<number, FeedbackAttachment[]>>({});
+  const [loadingGallery, setLoadingGallery] = useState<number | null>(null);
+  const [lightbox, setLightbox] = useState<{ items: FeedbackAttachment[]; index: number } | null>(null);
 
   useEffect(() => {
     currentUser().then(setMe).catch(() => undefined);
@@ -60,6 +73,43 @@ export default function FeedbackPage() {
       setItems((current) => current.map((entry) => (entry.id === item.id ? updated : entry)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to update status.");
+    }
+  }
+
+  async function toggleGallery(item: Feedback) {
+    if (galleries[item.id]) {
+      setGalleries((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      return;
+    }
+    setLoadingGallery(item.id);
+    try {
+      const list = await listAttachments(item.id);
+      setGalleries((current) => ({ ...current, [item.id]: list }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load screenshots.");
+    } finally {
+      setLoadingGallery(null);
+    }
+  }
+
+  async function removeAttachment(item: Feedback, attachmentId: number) {
+    if (!window.confirm("Delete this screenshot?")) return;
+    try {
+      await deleteAttachment(attachmentId);
+      setGalleries((current) => ({
+        ...current,
+        [item.id]: (current[item.id] ?? []).filter((a) => a.id !== attachmentId),
+      }));
+      if (lightbox) {
+        const items = lightbox.items.filter((a) => a.id !== attachmentId);
+        setLightbox(items.length ? { items, index: Math.min(lightbox.index, items.length - 1) } : null);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to delete screenshot.");
     }
   }
 
@@ -142,6 +192,47 @@ export default function FeedbackPage() {
                     </div>
                     <h2 className="mt-2 text-base font-semibold text-white">{item.title}</h2>
                     <p className="mt-1 text-sm text-[#4b5560]">{item.description}</p>
+                    <div className="mt-3">
+                      <button
+                        onClick={() => toggleGallery(item)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#2a2a2a] bg-[#161616] px-3 py-1.5 text-xs font-semibold text-[#e5e5e5] hover:border-[#ff1a1a]/60"
+                      >
+                        {loadingGallery === item.id ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                          <Paperclip size={13} />
+                        )}
+                        {galleries[item.id] ? `Hide screenshots (${galleries[item.id].length})` : "View screenshots"}
+                      </button>
+                      {galleries[item.id] && (
+                        galleries[item.id].length === 0 ? (
+                          <p className="mt-2 text-xs text-[#8a8a8a]">No screenshots attached.</p>
+                        ) : (
+                          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                            {galleries[item.id].map((shot, i) => (
+                              <li key={shot.id} className="group relative overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#161616]">
+                                <button
+                                  onClick={() => setLightbox({ items: galleries[item.id], index: i })}
+                                  className="block w-full"
+                                  aria-label={`Open ${shot.fileName} fullscreen`}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={attachmentUrl(shot)} alt={shot.fileName} loading="lazy" className="h-20 w-full object-cover" />
+                                </button>
+                                <p className="truncate px-1.5 py-1 text-[10px] text-[#b3b3b3]">{shot.fileName}</p>
+                                <button
+                                  onClick={() => removeAttachment(item, shot.id)}
+                                  aria-label={`Delete ${shot.fileName}`}
+                                  className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-0 transition group-hover:opacity-100 hover:bg-[#ff1a1a] focus:opacity-100"
+                                >
+                                  <X size={13} />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )
+                      )}
+                    </div>
                     {(item.internalNotes || canTriage) && (
                       <div className="mt-3 rounded-lg bg-[#161616] p-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8a8a8a]">Internal notes</p>
@@ -185,6 +276,63 @@ export default function FeedbackPage() {
               </ul>
             )}
           </div>
+
+          {lightbox && lightbox.items.length > 0 && (
+            <div
+              className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Screenshot preview"
+              onClick={() => setLightbox(null)}
+            >
+              <div className="flex items-center justify-between p-4" onClick={(e) => e.stopPropagation()}>
+                <p className="truncate text-sm font-semibold text-white">
+                  {lightbox.items[lightbox.index].fileName} · {lightbox.index + 1} of {lightbox.items.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <a
+                    href={attachmentUrl(lightbox.items[lightbox.index])}
+                    download={lightbox.items[lightbox.index].fileName}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="Download screenshot"
+                    className="rounded-xl p-2.5 text-[#b3b3b3] hover:bg-white/10 hover:text-white"
+                  >
+                    <Download size={19} />
+                  </a>
+                  <button aria-label="Expand fullscreen" onClick={() => document.documentElement.requestFullscreen?.().catch(() => undefined)} className="rounded-xl p-2.5 text-[#b3b3b3] hover:bg-white/10 hover:text-white">
+                    <Expand size={19} />
+                  </button>
+                  <button aria-label="Close preview" onClick={() => setLightbox(null)} className="rounded-xl p-2.5 text-[#b3b3b3] hover:bg-white/10 hover:text-white">
+                    <X size={19} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-1 items-center justify-center gap-2 px-2 pb-6" onClick={(e) => e.stopPropagation()}>
+                <button
+                  aria-label="Previous screenshot"
+                  disabled={lightbox.items.length < 2}
+                  onClick={() => setLightbox((lb) => (lb ? { items: lb.items, index: (lb.index - 1 + lb.items.length) % lb.items.length } : lb))}
+                  className="rounded-xl p-3 text-white hover:bg-white/10 disabled:opacity-30"
+                >
+                  <ChevronLeft size={24} />
+                </button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={attachmentUrl(lightbox.items[lightbox.index])}
+                  alt={lightbox.items[lightbox.index].fileName}
+                  className="max-h-[75vh] max-w-[86vw] rounded-xl object-contain"
+                />
+                <button
+                  aria-label="Next screenshot"
+                  disabled={lightbox.items.length < 2}
+                  onClick={() => setLightbox((lb) => (lb ? { items: lb.items, index: (lb.index + 1) % lb.items.length } : lb))}
+                  className="rounded-xl p-3 text-white hover:bg-white/10 disabled:opacity-30"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
