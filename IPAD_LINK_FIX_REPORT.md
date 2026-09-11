@@ -53,5 +53,5 @@ Contributing iPad factor: double-tap-zoom delay made remaining taps feel dead.
 
 ## 6. Commit / push
 
-- Commit: "Fix iPad hyperlink interaction issues" (see `git log`).
-- Push: `origin/main` (manojacharya3/Dance-7) — synced.
+- Commit: "Fix iPad hyperlink interaction issues" (`83f96bd`).
+- Push: `origin/main` (manojacharya3/Dance-7) — ✅ synced.
