@@ -93,5 +93,5 @@ displayed in Admin → AI Assistant → "Data check · {name} (id {id})". Not ha
 
 ## 7. Commit / push
 
-- Commit: "Restore Whitefield AI knowledge base" (see `git log`).
-- Push: `origin/main` (manojacharya3/Dance-7) — synced.
+- Commit: "Restore Whitefield AI knowledge base" (`7ade99a`).
+- Push: `origin/main` (manojacharya3/Dance-7) — ✅ synced.
