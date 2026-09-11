@@ -6,6 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { Sidebar } from "@/components/sidebar";
 import { Card, LoadingState, PageHeader } from "@/components/ui/card";
 import { aiAdmin, getBranches, type BranchOption } from "@/lib/ai-chat";
+import { formatTime12Hour } from "@/lib/time";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -42,7 +43,7 @@ const TABS: Tab[] = [
   },
   {
     resource: "schedules", label: "Schedules",
-    title: (r) => `${r.dayOfWeek} ${r.startTime}–${r.endTime}`, sub: (r) => [r.batchLabel, r.instructorName].filter(Boolean).join(" · "),
+    title: (r) => `${r.dayOfWeek} ${formatTime12Hour(r.startTime)}–${formatTime12Hour(r.endTime)}`, sub: (r) => [r.batchLabel, r.instructorName].filter(Boolean).join(" · "),
     fields: [
       { key: "aiClassId", label: "Class", type: "select", options: [], required: true },
       { key: "dayOfWeek", label: "Day", type: "select", options: DAYS, required: true },

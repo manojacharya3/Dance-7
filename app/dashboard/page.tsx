@@ -30,6 +30,7 @@ import { getPayments, type Payment } from "@/lib/payments";
 import { getStudents, type Student } from "@/lib/students";
 import { getFeedbackList, type Feedback as FeedbackItem } from "@/lib/feedback";
 import { formatCurrency } from "@/lib/currency";
+import { formatTimeRange } from "@/lib/time";
 
 type Scope = "OWNER" | "BRANCH_HEAD" | "INSTRUCTOR" | "DEVELOPER";
 
@@ -299,7 +300,7 @@ export default function DashboardPage() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-bold text-white">{batch.batchName}</p>
                           <p className="truncate text-xs text-[#8a8a8a]">
-                            {branchName(batch.branchId, branches)} · {batch.startTime}–{batch.endTime} · Cap {batch.capacity}
+                            {branchName(batch.branchId, branches)} · {formatTimeRange(batch.startTime, batch.endTime)} · Cap {batch.capacity}
                           </p>
                         </div>
                         <span className={batch.active ? "d7-pill-green" : "d7-pill-slate"}>{batch.active ? "Scheduled" : "Inactive"}</span>
