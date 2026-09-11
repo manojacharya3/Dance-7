@@ -33,6 +33,8 @@ public class Invoice {
     @Column(name = "transaction_reference", length = 120) private String transactionReference;
     @Column(name = "invoice_date", nullable = false) private LocalDate invoiceDate;
     @Column(nullable = false, length = 20) private String status;
+    @Column(name = "pdf_data", columnDefinition = "BYTEA") private byte[] pdfData;
+    @Column(name = "sent_at") private LocalDateTime sentAt;
     @Column(nullable = false, updatable = false) private LocalDateTime createdAt;
     @Column(nullable = false) private LocalDateTime updatedAt;
     @PrePersist void onCreate() { LocalDateTime now = LocalDateTime.now(); createdAt = now; updatedAt = now; }
@@ -48,5 +50,7 @@ public class Invoice {
     public String getTransactionReference() { return transactionReference; } public void setTransactionReference(String transactionReference) { this.transactionReference = transactionReference; }
     public LocalDate getInvoiceDate() { return invoiceDate; } public void setInvoiceDate(LocalDate invoiceDate) { this.invoiceDate = invoiceDate; }
     public String getStatus() { return status; } public void setStatus(String status) { this.status = status; }
+    public byte[] getPdfData() { return pdfData; } public void setPdfData(byte[] pdfData) { this.pdfData = pdfData; }
+    public LocalDateTime getSentAt() { return sentAt; } public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
     public LocalDateTime getCreatedAt() { return createdAt; } public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

@@ -14,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByIdAndTenantIdAndActiveTrue(Long id, String tenantId);
+    Optional<Payment> findByRazorpayOrderIdAndTenantIdAndActiveTrue(String razorpayOrderId, String tenantId);
+    Optional<Payment> findByRazorpayOrderIdAndActiveTrue(String razorpayOrderId);
     Page<Payment> findByTenantIdAndActiveTrue(String tenantId, Pageable pageable);
     Page<Payment> findByTenantIdAndStudentIdInAndActiveTrue(String tenantId, Collection<Long> studentIds, Pageable pageable);
     Page<Payment> findByTenantIdAndBranchIdAndActiveTrue(String tenantId, Long branchId, Pageable pageable);

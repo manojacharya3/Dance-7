@@ -29,6 +29,7 @@ import { getMemberships, type Membership } from "@/lib/memberships";
 import { getPayments, type Payment } from "@/lib/payments";
 import { getStudents, type Student } from "@/lib/students";
 import { getFeedbackList, type Feedback as FeedbackItem } from "@/lib/feedback";
+import { getInvoices, type Invoice } from "@/lib/invoices";
 import { formatCurrency } from "@/lib/currency";
 import { formatTimeRange } from "@/lib/time";
 
@@ -50,6 +51,7 @@ export default function DashboardPage() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [assignments, setAssignments] = useState<Record<number, StudentBatch[]>>({});
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
   const [error, setError] = useState("");
@@ -79,7 +81,7 @@ export default function DashboardPage() {
         return;
       }
       try {
-        const [branchList, instructorPage, batchPage, studentPage, attendancePage, membershipPage, paymentPage] =
+        const [branchList, instructorPage, batchPage, studentPage, attendancePage, membershipPage, paymentPage, invoicePage] =
           await Promise.all([
             getBranches(),
             getInstructors(),
@@ -88,6 +90,7 @@ export default function DashboardPage() {
             getAttendance(),
             getMemberships("", 0, 100),
             getPayments("", 0, 100),
+            getInvoices().catch(() => ({ content: [] as Invoice[] })),
           ]);
         setBranches(branchList);
         setInstructors(instructorPage.content);
@@ -96,6 +99,7 @@ export default function DashboardPage() {
         setAttendance(attendancePage.content);
         setMemberships(membershipPage.content);
         setPayments(paymentPage.content);
+        setInvoices(invoicePage.content);
         const pairs = await Promise.all(
           batchPage.content.map(async (batch) => [batch.id, await getBatchStudents(batch.id)] as const)
         );
@@ -185,6 +189,12 @@ export default function DashboardPage() {
     (item) => item.active && item.status === "ACTIVE" && daysUntil(item.endDate) >= 0 && daysUntil(item.endDate) <= 30
   );
   const revenue = sum(paidPayments);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const monthStr = todayStr.slice(0, 7);
+  const todayRevenue = sum(paidPayments.filter((p) => p.paymentDate === todayStr));
+  const monthRevenue = sum(paidPayments.filter((p) => p.paymentDate >= `${monthStr}-01`));
+  const failedPaymentsList = scopedPayments.filter((item) => item.paymentStatus === "FAILED");
+  const invoiceCount = invoices.length;
 
   return (
     <div className="min-h-screen">
@@ -317,6 +327,19 @@ export default function DashboardPage() {
 
               <section className="mt-4">
                 <Card>
+                  <SectionHeading title="Finance today" linkHref="/reports" linkLabel="Full reports" />
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                    <FinanceMini label="Today's revenue" value={formatCurrency(todayRevenue)} />
+                    <FinanceMini label="Pending" value={formatCurrency(sum(pendingPaymentsList))} />
+                    <FinanceMini label="Failed" value={String(failedPaymentsList.length)} />
+                    <FinanceMini label="This month" value={formatCurrency(monthRevenue)} />
+                    <FinanceMini label="Invoices" value={String(invoiceCount)} />
+                  </div>
+                </Card>
+              </section>
+
+              <section className="mt-4">
+                <Card>
                   <SectionHeading title="Quick actions" />
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {[
@@ -352,6 +375,15 @@ function SectionHeading({ title, linkHref, linkLabel }: { title: string; linkHre
           {linkLabel} <ArrowRight size={15} />
         </Link>
       ) : null}
+    </div>
+  );
+}
+
+function FinanceMini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-[#2a2a2a] bg-[#161616] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8a8a8a]">{label}</p>
+      <p className="mt-1.5 truncate text-xl font-extrabold text-white">{value}</p>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {
   BadgeIndianRupee,
   Bell,
   CalendarCheck,
+  ChartColumn,
   CreditCard,
   FileText,
   Home,
@@ -33,6 +34,7 @@ export const navItems: NavItem[] = [
   { label: "Payments", href: "/payments", icon: BadgeIndianRupee, section: "Finance" },
   { label: "Invoices", href: "/invoices", icon: FileText, section: "Finance" },
   { label: "Reminders", href: "/reminders", icon: Bell, section: "Finance" },
+  { label: "Reports", href: "/reports", icon: ChartColumn, section: "Finance" },
   { label: "Feedback", href: "/feedback", icon: MessageSquarePlus, section: "System" },
   { label: "AI Assistant", href: "/admin/ai", icon: Sparkles, section: "System" },
   { label: "Users", href: "/admin/users", icon: UsersRound, section: "System" },
@@ -50,7 +52,7 @@ export function visibleNavItems(user: AuthUser | null): NavItem[] {
   return navItems.filter((item) => {
     if (item.href === "/admin/users" || item.href === "/admin/ai") return Boolean(isOwner || isDeveloper);
     if (isDeveloper)
-      return ["/dashboard", "/students", "/instructors", "/batches", "/memberships", "/payments", "/invoices", "/reminders", "/feedback", "/admin/users"].includes(item.href);
+      return ["/dashboard", "/students", "/instructors", "/batches", "/memberships", "/payments", "/invoices", "/reminders", "/reports", "/feedback", "/admin/users", "/admin/ai"].includes(item.href);
     if (isInstructor) return ["/dashboard", "/students", "/attendance", "/batches", "/feedback"].includes(item.href);
     return true;
   });

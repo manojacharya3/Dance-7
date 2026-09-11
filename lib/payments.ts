@@ -1,6 +1,6 @@
-export type PaymentStatus = "PAID" | "PENDING";
+export type PaymentStatus = "PAID" | "PENDING" | "PROCESSING" | "FAILED" | "REFUNDED" | "CANCELLED";
 export type PaymentMethod = "CASH" | "UPI" | "CARD" | "BANK_TRANSFER";
-export type Payment = { id: number; tenantId: string; branchId: number; membershipId: number; studentId: number; amount: number; paymentDate: string; paymentMethod: PaymentMethod; paymentStatus: PaymentStatus; remarks?: string; active: boolean; createdAt?: string; updatedAt?: string };
+export type Payment = { id: number; tenantId: string; branchId: number; membershipId: number; studentId: number; amount: number; paymentDate: string; paymentMethod: PaymentMethod; paymentStatus: PaymentStatus; remarks?: string; razorpayOrderId?: string; razorpayPaymentId?: string; paidAt?: string; receiptNumber?: string; active: boolean; createdAt?: string; updatedAt?: string };
 export type PaymentPayload = Omit<Payment, "id" | "createdAt" | "updatedAt">;
 export type PaymentPage = { content: Payment[]; number: number; totalElements: number; totalPages: number; first: boolean; last: boolean };
 const API = process.env.NEXT_PUBLIC_API_URL ?? "/api";
@@ -13,3 +13,15 @@ export function deletePayment(id: number) { return request<void>(`/payments/${id
 export function getTotalRevenue() { return request<number>("/payments/summary/total-revenue?tenantId=default"); }
 export function getPendingPayments() { return request<number>("/payments/summary/pending?tenantId=default"); }
 export function getMonthlyCollections() { return request<number>("/payments/summary/monthly-collections?tenantId=default"); }
+export type RazorpayStatus = { enabled: boolean; keyId: string; currency: string; emailEnabled: boolean };
+export type RazorpayOrder = { orderId: string; amountPaise: number; currency: string; keyId: string; paymentId: number };
+export function razorpayStatus() { return request<RazorpayStatus>("/payments/razorpay/status?tenantId=default"); }
+export function createRazorpayOrder(paymentId: number) { return request<RazorpayOrder>("/payments/create-order?tenantId=default", { method: "POST", body: JSON.stringify({ paymentId }) }); }
+export function verifyRazorpayPayment(input: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string }) { return request<{ id: number; invoiceNumber: string }>(`/payments/verify?tenantId=default`, { method: "POST", body: JSON.stringify(input) }); }
+export async function downloadInvoicePdf(invoiceId: number) {
+  const response = await fetch(`${API}/invoices/${invoiceId}/pdf?tenantId=default`, { credentials: "include", cache: "no-store" });
+  if (!response.ok) throw new Error((await response.text()) || "Unable to download invoice.");
+  return response.blob();
+}
+export function resendInvoice(invoiceId: number) { return request<{ id: number }>(`/invoices/${invoiceId}/send?tenantId=default`, { method: "POST" }); }
+export function invoiceForPayment(paymentId: number) { return request<{ id: number; invoiceNumber: string }>(`/payments/${paymentId}/invoice?tenantId=default`); }

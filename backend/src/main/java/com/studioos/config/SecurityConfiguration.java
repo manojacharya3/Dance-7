@@ -25,6 +25,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/info", "/api/health", "/api/auth/**").permitAll()
                 .requestMatchers("/api/chat/public/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/payments/webhook").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(roleScopeFilter, JwtAuthenticationFilter.class)

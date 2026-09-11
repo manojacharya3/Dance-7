@@ -1,6 +1,10 @@
 package com.studioos.model;
 
 public enum PaymentStatus {
+    PENDING,
+    PROCESSING,
     PAID,
-    PENDING
+    FAILED,
+    REFUNDED,
+    CANCELLED
 }
