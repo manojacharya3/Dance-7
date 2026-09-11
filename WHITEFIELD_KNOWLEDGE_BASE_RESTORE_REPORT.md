@@ -29,23 +29,23 @@ Ruled out: tenant isolation (admin + chat + seed all use `default`), slug
 resolution (tolerant `slugify` match), conversation/lead storage (separate tables,
 never wiped by reseed).
 
-## 2. Database counts
+## 2. Database counts (verified live against Neon `neondb`)
 
-Direct database access is not available from this environment, so counts below
-are expectations, not live query results. After redeploy, open Admin → AI
-Assistant and read the "Data check" card, or call the diagnostics endpoint
-(staff auth). If `classes` is still 0 there, check Railway logs for
-`Dance7 AI seed failed` / `already present`.
+Queried directly: Whitefield = branch **id 2**, tenant `default`, active.
+Before: all AI knowledge tables **0 rows** (`ai_chat_conversations` had 6 rows,
+proving the backend was up but the seed had never populated Whitefield).
+Seeded directly with the v2 dataset; `dataset_version=whitefield-v2` recorded so
+future backend boots skip without wiping.
 
-| Table | Before (reported) | Expected after reseed |
-|-------|-------------------|-----------------------|
-| `ai_classes` | 0 | 7 (Sub Juniors, Juniors, Level 1 Kids, Level 2 Kids, Freestyle Adults Beginners, Level 1 Adults, Bharatanatyam) |
-| `ai_class_schedules` | 0 | 17 slots (spec days/timings) |
-| `ai_packages` | 0 | 4 (₹2,500 / ₹6,750 / ₹13,005 / ₹23,040) |
-| `ai_studio_settings` | 0 | 7 incl. `admission_fee=500`, `contact_phone=9731067867`, `dataset_version=whitefield-v2` |
-| `ai_chat_faqs` | 0 | 8 (fees, timings, admission, kids, Bharatanatyam, trial script, contact, join) |
-| `ai_chat_policies` | 0 | 2 (admission; unlisted-policies pointer — nothing invented) |
-| `ai_chat_offers` | 0 | 0 (none published — honest) |
+| Table | Before | After |
+|-------|--------|-------|
+| `ai_classes` | 0 | **7** (Sub Juniors 3–5, Juniors 6–8, L1 Kids 9–12, L2 Kids 13–15, Freestyle Adults Beginners 16+, L1 Adults 16+, Bharatanatyam all ages — all ₹2,500) |
+| `ai_class_schedules` | 0 | **17** (spec days/timings) |
+| `ai_packages` | 0 | **4** (₹2,500 / ₹6,750 / ₹13,005 / ₹23,040 — verified) |
+| `ai_studio_settings` | 0 | **7** (`admission_fee=500` ✅, `contact_phone=9731067867` ✅, trial/enrollment/unknown scripts, currency, dataset version) |
+| `ai_chat_faqs` | 0 | **8** |
+| `ai_chat_policies` | 0 | **2** (admission; unlisted-policies pointer) |
+| `ai_chat_offers` | 0 | **0** (none published — honest) |
 
 Requested `SELECT COUNT(*)` statements to run against the database directly:
 
@@ -80,10 +80,10 @@ displayed in Admin → AI Assistant → "Data check · {name} (id {id})". Not ha
   (classes → `getClasses`; age queries → recommender age fit; Bharatanatyam →
   keyword fit; fees → `getPackages` + admission setting; contact → branch details).
   `mvn test` covers intent routing incl. the exact reported queries.
-- Live validation requires the redeployed backend + seed run: ask the six
-  questions in the widget and confirm DB-sourced answers (prices/slots/ages).
-- If any answer still falls back after redeploy, the diagnostics card pinpoints
-  which table is empty.
+- Data-level: packages/admission/phone/class bands verified by direct query above.
+- Live widget check (you): ask the six questions — answers should now come from
+  retrieval. No redeploy needed for the data itself; the backend serves whatever
+  is in these tables on every turn.
 
 ## 6. Validation results
 
