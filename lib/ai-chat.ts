@@ -23,7 +23,7 @@ async function request<T>(url: string, options?: RequestInit, auth = false): Pro
 }
 
 export type BranchOption = { id: number; name: string; slug: string };
-export type ChatRecommendation = { classId: number; name: string; category: string; reason: string };
+export type ChatRecommendation = { classId: number; name: string; category: string; reason: string; ageRange: string; schedule: string; fee: string };
 export type ChatReply = {
   conversationId: number;
   visitorId: string;

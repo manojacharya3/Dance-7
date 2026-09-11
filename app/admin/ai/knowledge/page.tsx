@@ -35,6 +35,7 @@ const TABS: Tab[] = [
       { key: "minAge", label: "Min age", type: "number" },
       { key: "maxAge", label: "Max age", type: "number" },
       { key: "experienceLevel", label: "Level", type: "select", options: ["BEGINNER", "INTERMEDIATE", "ADVANCED", "ALL"] },
+      { key: "feeAmount", label: "Fee (₹)", type: "number" },
       { key: "description", label: "Description", type: "textarea", wide: true },
       { key: "active", label: "Active", type: "select", options: ACTIVE_OPTS },
     ],

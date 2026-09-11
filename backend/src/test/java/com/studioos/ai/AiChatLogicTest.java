@@ -67,6 +67,20 @@ class AiChatLogicTest {
     }
 
     @Test
+    void joinRefinementAndCategorySignals() throws Exception {
+        Method refine = AiChatService.class.getDeclaredMethod("refineIntent", String.class, String.class);
+        refine.setAccessible(true);
+        assertEquals("JOIN", refine.invoke(null, "LEAD", "I want to join dance classes"));
+        assertEquals("LEAD", refine.invoke(null, "LEAD", "I want to join, my number is 9731067867"));
+        assertEquals("LEAD", refine.invoke(null, "LEAD", "join my 6 year old"));
+        Method signal = AiChatService.class.getDeclaredMethod("hasCategorySignal", String.class);
+        signal.setAccessible(true);
+        assertTrue((Boolean) signal.invoke(null, "Do you teach Bharatanatyam?"));
+        assertTrue((Boolean) signal.invoke(null, "classes for my kid"));
+        assertFalse((Boolean) signal.invoke(null, "Suggest a class"));
+    }
+
+    @Test
     void fallbackReplyUsesBranchPhone() throws Exception {
         Method m = AiChatService.class.getDeclaredMethod("fallbackReply", String.class, String.class);
         m.setAccessible(true);

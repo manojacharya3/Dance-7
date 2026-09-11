@@ -91,12 +91,21 @@ public class AiChatService {
 
         try {
             String intent = detectIntent(clean);
+            // Bare join interest ("I want to join") carries no details yet: ask the
+            // child/adult + age clarification first instead of jumping to lead capture.
+            intent = refineIntent(intent, clean);
             boolean leadSignal = isLeadSignal(clean, intent);
 
             List<RecommendedClassDto> recs = List.of();
             if ("RECOMMEND".equals(intent)) {
-                recs = recommender.recommend(tenant, String.valueOf(branch.getId()),
-                    extractAge(clean), extractLevel(clean), clean);
+                Integer age = extractAge(clean);
+                String level = extractLevel(clean);
+                if (age == null && level == null && !hasCategorySignal(clean)) {
+                    // Missing inputs: ask a short clarification instead of guessing.
+                    intent = "CLARIFY";
+                } else {
+                    recs = recommender.recommend(tenant, String.valueOf(branch.getId()), age, level, clean);
+                }
             }
             List<Map<String, String>> hits = retrieval.searchKnowledgeBase(tenant, branch.getId(), clean, 3);
             List<ChatTurn> history = messages.findByConversationIdOrderByCreatedAtAscIdAsc(convo.getId()).stream()
@@ -111,8 +120,9 @@ public class AiChatService {
                 needsClasses(intent) ? retrieval.getClasses(tenant, branch.getId()) : List.of(),
                 List.of(),
                 needsPolicies(intent) ? retrieval.getPolicies(tenant, branch.getId(), null) : List.of(),
-                needsOffers(intent) ? retrieval.getOffers(tenant, branch.getId()) : List.of(),
-                hits, recs, history, leadSignal);
+            needsOffers(intent) ? retrieval.getOffers(tenant, branch.getId()) : List.of(),
+            hits, recs, history, leadSignal,
+            "TRIAL".equals(intent) ? retrieval.setting(tenant, branch.getId(), "trial_info").orElse(null) : null);
 
             Dance7AiPort provider = llm.getIfAvailable() != null ? llm.getIfAvailable() : ruleBased;
             AiReply reply = provider.generate(facts);
@@ -235,8 +245,17 @@ public class AiChatService {
         return null;
     }
 
-    static String extractLevel(String text) {
-        String t = text.toLowerCase();
+    static String refineIntent(String intent, String text) {
+        if ("LEAD".equals(intent) && extractAge(text) == null && !text.matches(".*\\d{7,}.*")) return "JOIN";
+        return intent;
+    }
+
+    static boolean hasCategorySignal(String text) {
+        String t = " " + text.toLowerCase() + " ";
+        return t.matches(".*\\b(kid|kids|child|children|toddler|teen|adult|adults|classical|bharatanatyam|hip.?hop|contemporary|bollywood|freestyle|zumba)\\b.*");
+    }
+
+    static String extractLevel(String text) {        String t = text.toLowerCase();
         if (t.contains("beginner") || t.contains("no experience") || t.contains("just start") || t.contains("new to")) return "BEGINNER";
         if (t.contains("intermediate")) return "INTERMEDIATE";
         if (t.contains("advanced") || t.contains("experienced")) return "ADVANCED";

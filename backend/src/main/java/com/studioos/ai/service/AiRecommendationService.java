@@ -2,11 +2,15 @@ package com.studioos.ai.service;
 
 import com.studioos.ai.dto.AiDtos.RecommendedClassDto;
 import com.studioos.ai.model.AiClass;
+import com.studioos.ai.model.AiClassSchedule;
 import com.studioos.ai.repository.AiClassRepository;
+import com.studioos.ai.repository.AiClassScheduleRepository;
 import com.studioos.model.Branch;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class AiRecommendationService {
     private final AiBranchContext ctx;
     private final AiClassRepository classes;
+    private final AiClassScheduleRepository schedules;
 
-    public AiRecommendationService(AiBranchContext ctx, AiClassRepository classes) {
-        this.ctx = ctx; this.classes = classes;
+    public AiRecommendationService(AiBranchContext ctx, AiClassRepository classes, AiClassScheduleRepository schedules) {
+        this.ctx = ctx; this.classes = classes; this.schedules = schedules;
     }
 
     @Transactional(readOnly = true)
@@ -65,10 +70,22 @@ public class AiRecommendationService {
             }
             scored.add(new Scored(score, c, reasons));
         }
+        Map<Long, List<AiClassSchedule>> byClass = schedules
+            .findByTenantIdAndBranchIdAndActiveTrueOrderByDayOfWeekAscStartTimeAsc(b.getTenantId(), b.getId())
+            .stream().collect(Collectors.groupingBy(AiClassSchedule::getAiClassId));
         return scored.stream().sorted(Comparator.comparingInt(Scored::score).reversed()).limit(3)
-            .filter(s -> s.score() > 0).map(s -> new RecommendedClassDto(s.cls().getId(), s.cls().getName(),
-                s.cls().getCategory(), s.reasons().isEmpty() ? "Popular at this branch." : String.join(", ", s.reasons()) + "."))
-            .toList();
+            .filter(s -> s.score() > 0).map(s -> {
+                AiClass c = s.cls();
+                String sched = byClass.getOrDefault(c.getId(), List.of()).stream()
+                    .map(slot -> slot.getDayOfWeek() + " " + slot.getStartTime() + "–" + slot.getEndTime())
+                    .collect(Collectors.joining(", "));
+                String ages = (c.getMinAge() == null && c.getMaxAge() == null) ? "All age groups"
+                    : "Age: " + (c.getMinAge() == null ? "" : c.getMinAge()) + "–" + (c.getMaxAge() == null ? "+" : c.getMaxAge()) + " years";
+                String fee = c.getFeeAmount() == null ? "" : "₹" + c.getFeeAmount().stripTrailingZeros().toPlainString();
+                return new RecommendedClassDto(c.getId(), c.getName(), c.getCategory(),
+                    s.reasons().isEmpty() ? "Popular at this branch." : String.join(", ", s.reasons()) + ".",
+                    ages, sched, fee);
+            }).toList();
     }
 
     private String norm(String value) {

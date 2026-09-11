@@ -12,7 +12,7 @@ public final class AiDtos {
 
     public record AiClassDto(Long id, String tenantId, @NotNull Long branchId, @NotBlank String name,
         String category, Integer minAge, Integer maxAge, String experienceLevel,
-        String description, Boolean active, LocalDateTime createdAt, LocalDateTime updatedAt) {}
+        BigDecimal feeAmount, String description, Boolean active, LocalDateTime createdAt, LocalDateTime updatedAt) {}
 
     public record AiClassScheduleDto(Long id, String tenantId, @NotNull Long branchId, @NotNull Long aiClassId,
         @NotBlank String dayOfWeek, @NotBlank String startTime, @NotBlank String endTime,
@@ -41,7 +41,8 @@ public final class AiDtos {
     public record ChatMessageResponse(Long conversationId, String visitorId, String reply, String intent,
         boolean leadPrompt, List<String> quickActions, List<RecommendedClassDto> recommendations) {}
 
-    public record RecommendedClassDto(Long classId, String name, String category, String reason) {}
+    public record RecommendedClassDto(Long classId, String name, String category, String reason,
+        String ageRange, String schedule, String fee) {}
 
     public record RecommendRequest(String branch, Integer age, String experienceLevel, String interest) {}
 

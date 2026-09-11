@@ -104,6 +104,7 @@ public class HttpLlmAiProvider implements Dance7AiPort {
             facts.put("schedules", f.schedules());
             facts.put("classes", f.classes());
             facts.put("offers", f.offers());
+            facts.put("trial_info", f.trialInfo());
             facts.put("knowledge_hits", f.searchHits());
             facts.put("recommendations", f.recommendations());
             return mapper.writeValueAsString(facts);

@@ -78,7 +78,7 @@ public class AiLeadService {
         AiChatLead lead = leads.findByIdAndTenantIdAndBranchId(id, b.getTenantId(), b.getId())
             .orElseThrow(() -> new EntityNotFoundException("Lead not found: " + id));
         String next = status == null ? "" : status.trim().toUpperCase();
-        if (!List.of("NEW", "CONTACTED", "ENROLLED", "CLOSED").contains(next))
+        if (!List.of("NEW", "CONTACTED", "TRIAL", "ENROLLED", "LOST", "CLOSED").contains(next))
             throw new IllegalArgumentException("Unknown lead status: " + status);
         lead.setStatus(next);
         return toDto(leads.save(lead));

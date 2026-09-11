@@ -21,37 +21,36 @@ public class RuleBasedAiProvider implements Dance7AiPort {
             case "GREETING" -> "Hi! Welcome to Dance7 " + f.branchName()
                 + ". Ask me about classes, timings, fees — or tap an option below to explore.";
             case "FEES" -> feeReply(f);
-            case "ADMISSION_FEE" -> "The one-time admission fee at Dance7 " + f.branchName() + " is "
-                + f.admissionFee().getOrDefault("admission_fee", "not listed")
-                + ". Want me to walk you through the packages too?";
+            case "ADMISSION_FEE" -> "The one-time admission fee is "
+                + f.admissionFee().getOrDefault("admission_fee", "not listed") + ".";
             case "SCHEDULE" -> scheduleReply(f);
             case "CLASSES" -> classesReply(f);
             case "RECOMMEND" -> recommendReply(f);
+            case "JOIN", "CLARIFY" ->
+                "Absolutely! \uD83D\uDC83 I'd love to help you find the right batch.\n\nIs the class for:\n1. A child\n2. An adult\n\nAnd if it's for a child, what is their age?";
             case "CONTACT" -> contactReply(f);
             case "TRIAL" -> trialReply(f);
             case "POLICY" -> knowledgeReply(f, "policies", "Here is our policy for Dance7 " + f.branchName() + ":");
             case "OFFER" -> knowledgeReply(f, "offers", "Current offers at Dance7 " + f.branchName() + ":");
             case "LEAD" ->
-                "Wonderful! I can have the " + f.branchName() + " team call you to confirm your batch. "
-                    + "Just share your details using the form — name, phone, and the class you are interested in.";
+                "Great! I can help you get started. Would you like me to collect your details so the studio team can contact you? "
+                    + "Tap the button below and share the student's name and phone number — nothing is enrolled until the studio team confirms it with you.";
             case "THANKS" -> "You are most welcome! Anything else I can help with — classes, fees, or timings?";
             default -> unknownReply(f);
         };
-        boolean leadPrompt = f.leadSignal() || "LEAD".equals(f.intent()) || "FEES".equals(f.intent());
+        boolean leadPrompt = f.leadSignal() || List.of("LEAD", "FEES", "RECOMMEND", "JOIN").contains(f.intent());
         return new AiReply(reply, leadPrompt);
     }
 
     private String feeReply(FactPack f) {
         if (f.packages().isEmpty()) return unknownReply(f);
-        StringBuilder sb = new StringBuilder("Here are the current packages at Dance7 " + f.branchName() + ": ");
+        StringBuilder sb = new StringBuilder("Here are the package options at Dance7 " + f.branchName() + ":\n");
         for (Map<String, String> p : f.packages()) {
-            sb.append(p.getOrDefault("name", "Package"));
-            if (p.containsKey("fee")) sb.append(" at ").append(p.get("fee"));
-            if (p.containsKey("duration")) sb.append(" (").append(p.get("duration")).append(")");
-            sb.append("; ");
+            sb.append("\n").append(p.getOrDefault("name", "Package")).append(" – ").append(p.getOrDefault("fee", "not listed"));
+            if (p.containsKey("details")) sb.append(" (").append(p.get("details")).append(")");
         }
-        sb.append("One-time admission fee: ").append(f.admissionFee().getOrDefault("admission_fee", "not listed")).append(". ");
-        sb.append("Shall I arrange a callback to confirm your batch?");
+        sb.append("\n\nOne-time admission fee: ").append(f.admissionFee().getOrDefault("admission_fee", "not listed")).append(".");
+        sb.append("\nShall I arrange a callback to confirm your batch?");
         return sb.toString();
     }
 
@@ -82,28 +81,37 @@ public class RuleBasedAiProvider implements Dance7AiPort {
     private String recommendReply(FactPack f) {
         List<RecommendedClassDto> recs = f.recommendations();
         if (recs.isEmpty()) return classesReply(f);
-        StringBuilder sb = new StringBuilder("Based on what you told me, I recommend: ");
-        for (RecommendedClassDto r : recs) {
-            sb.append(r.name()).append(" — ").append(r.reason()).append(" ");
+        RecommendedClassDto top = recs.get(0);
+        StringBuilder sb = new StringBuilder("Based on what you told me, I'd recommend:\n");
+        sb.append("\n🕺 ").append(top.name());
+        if (top.ageRange() != null && !top.ageRange().isBlank()) sb.append("\n").append(top.ageRange());
+        if (top.schedule() != null && !top.schedule().isBlank()) sb.append("\n").append(top.schedule());
+        if (top.fee() != null && !top.fee().isBlank()) sb.append("\n").append(top.fee()).append("/month");
+        if (recs.size() > 1) {
+            sb.append("\n\nAlso worth a look: ");
+            sb.append(recs.subList(1, recs.size()).stream().map(RecommendedClassDto::name).reduce((a, b) -> a + ", " + b).orElse(""));
+            sb.append(".");
         }
-        sb.append("Want the ").append(f.branchName()).append(" team to call you to confirm?");
-        return sb.toString().trim();
+        sb.append("\n\nWould you like to know about the package options?");
+        return sb.toString();
     }
 
     private String contactReply(FactPack f) {
         Map<String, String> d = f.branchDetails();
-        StringBuilder sb = new StringBuilder("You can reach Dance7 " + f.branchName());
-        if (d.containsKey("phone")) sb.append(" at ").append(d.get("phone"));
-        if (d.containsKey("address")) sb.append(". Studio: ").append(d.get("address"));
-        sb.append(". Or share your details here and we will call you back.");
-        return sb.toString();
+        if (d.containsKey("phone"))
+            return "Sure! You can contact the Dance7 " + f.branchName() + " branch at:\n\n📞 " + d.get("phone");
+        return unknownReply(f);
     }
 
     private String trialReply(FactPack f) {
         Optional<Map<String, String>> trial = f.searchHits().stream().findFirst();
-        if (trial.isPresent()) return trial.get().getOrDefault("text", "") + " Shall I book one for you?";
-        return "Yes — new students can usually book a trial class before enrolling at Dance7 "
-            + f.branchName() + ". Share your details and the team will schedule it.";
+        if (trial.isPresent()) {
+            String text = trial.get().getOrDefault("text", "");
+            if (!text.isBlank()) return text;
+        }
+        // Never invent trial availability: the branch setting is the only other source.
+        if (f.trialInfo() != null && !f.trialInfo().isBlank()) return f.trialInfo();
+        return unknownReply(f);
     }
 
     private String knowledgeReply(FactPack f, String kind, String prefix) {

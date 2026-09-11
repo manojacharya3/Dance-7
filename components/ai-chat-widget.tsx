@@ -58,7 +58,7 @@ export function AiChatWidget() {
       setMessages([
         {
           role: "assistant",
-          text: `Hi! Welcome to Dance7 ${name}. Ask me about classes, timings, fees — or tap an option below to explore.`,
+          text: `Hi! 👋 Welcome to Dance7 – The Art Factory, ${name}.\n\nI'm your Dance7 Assistant. I can help you find the right dance class, check batch timings, fees and packages, and help you get started.\n\nWhat are you looking for today?`,
         },
       ]);
       setConversationId(undefined);
@@ -159,7 +159,7 @@ export function AiChatWidget() {
                   </span>
                 )}
                 <p
-                  className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 ${
+                  className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-6 ${
                     m.role === "user"
                       ? "rounded-br-md bg-[#ff1a1a] font-medium text-white"
                       : "rounded-bl-md border border-[#2a2a2a] bg-[#161616] text-[#e5e5e5]"

@@ -199,6 +199,7 @@ public class AiRetrievalService {
         if (c.getMinAge() != null || c.getMaxAge() != null)
             out.put("age_range", (c.getMinAge() == null ? "0" : c.getMinAge()) + "–" + (c.getMaxAge() == null ? "+" : c.getMaxAge()));
         if (c.getExperienceLevel() != null) out.put("level", c.getExperienceLevel());
+        if (c.getFeeAmount() != null) out.put("fee", "₹" + c.getFeeAmount().stripTrailingZeros().toPlainString());
         if (c.getDescription() != null) out.put("about", c.getDescription());
         return out;
     }

@@ -22,6 +22,7 @@ public class AiClass {
     @Column(name = "min_age") private Integer minAge;
     @Column(name = "max_age") private Integer maxAge;
     @Column(name = "experience_level", length = 40) private String experienceLevel;
+    @Column(name = "fee_amount", precision = 12, scale = 2) private java.math.BigDecimal feeAmount;
     @Column(length = 2000) private String description;
     @Column(nullable = false) private boolean active = true;
     @Column(nullable = false, updatable = false) private LocalDateTime createdAt;
@@ -43,6 +44,8 @@ public class AiClass {
     public void setMaxAge(Integer maxAge) { this.maxAge = maxAge; }
     public String getExperienceLevel() { return experienceLevel; }
     public void setExperienceLevel(String experienceLevel) { this.experienceLevel = experienceLevel; }
+    public java.math.BigDecimal getFeeAmount() { return feeAmount; }
+    public void setFeeAmount(java.math.BigDecimal feeAmount) { this.feeAmount = feeAmount; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public boolean isActive() { return active; }

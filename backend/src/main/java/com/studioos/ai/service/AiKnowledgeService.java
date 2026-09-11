@@ -61,7 +61,8 @@ public class AiKnowledgeService {
         entity.setTenantId(b.getTenantId()); entity.setBranchId(b.getId());
         entity.setName(dto.name().trim()); entity.setCategory(norm(dto.category()));
         entity.setMinAge(dto.minAge()); entity.setMaxAge(dto.maxAge());
-        entity.setExperienceLevel(norm(dto.experienceLevel())); entity.setDescription(dto.description());
+        entity.setExperienceLevel(norm(dto.experienceLevel())); entity.setFeeAmount(dto.feeAmount());
+        entity.setDescription(dto.description());
         if (dto.active() != null) entity.setActive(dto.active());
         return toClassDto(classes.save(entity));
     }
@@ -234,7 +235,7 @@ public class AiKnowledgeService {
 
     private AiClassDto toClassDto(AiClass c) {
         return new AiClassDto(c.getId(), c.getTenantId(), c.getBranchId(), c.getName(), c.getCategory(),
-            c.getMinAge(), c.getMaxAge(), c.getExperienceLevel(), c.getDescription(), c.isActive(), c.getCreatedAt(), c.getUpdatedAt());
+            c.getMinAge(), c.getMaxAge(), c.getExperienceLevel(), c.getFeeAmount(), c.getDescription(), c.isActive(), c.getCreatedAt(), c.getUpdatedAt());
     }
 
     private AiClassScheduleDto toScheduleDto(AiClassSchedule s) {

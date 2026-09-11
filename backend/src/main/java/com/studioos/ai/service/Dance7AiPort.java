@@ -16,7 +16,7 @@ public interface Dance7AiPort {
         List<Map<String, String>> classes, List<Map<String, String>> faqs,
         List<Map<String, String>> policies, List<Map<String, String>> offers,
         List<Map<String, String>> searchHits, List<RecommendedClassDto> recommendations,
-        List<ChatTurn> history, boolean leadSignal) {}
+        List<ChatTurn> history, boolean leadSignal, String trialInfo) {}
 
     record ChatTurn(String role, String content) {}
     record AiReply(String text, boolean leadPrompt) {}

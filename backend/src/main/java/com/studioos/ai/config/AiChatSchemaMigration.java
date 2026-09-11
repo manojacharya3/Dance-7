@@ -35,6 +35,8 @@ public class AiChatSchemaMigration implements CommandLineRunner {
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_chat_policies (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, title VARCHAR(200) NOT NULL, body VARCHAR(4000) NOT NULL, category VARCHAR(80), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_chat_offers (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, title VARCHAR(200) NOT NULL, body VARCHAR(4000) NOT NULL, valid_from DATE, valid_until DATE, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_chat_audit (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT, conversation_id BIGINT, event VARCHAR(60) NOT NULL, detail VARCHAR(500), ip_hash VARCHAR(128), created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        // Class-level fee (spec: each class carries its own fee).
+        jdbc.execute("ALTER TABLE ai_classes ADD COLUMN IF NOT EXISTS fee_amount NUMERIC(12,2)");
         // The ON CONFLICT seed below needs this constraint even when Hibernate
         // (ddl-auto:update) created the table first without it — otherwise Postgres
         // raises 42P10, the runner throws, Spring Boot fails to start, and the
@@ -50,6 +52,14 @@ public class AiChatSchemaMigration implements CommandLineRunner {
         }
     }
 
+    /**
+     * Seeds the verified Whitefield dataset (spec v2). Versioned via the
+     * dataset_version setting: re-runs (replacing only AI knowledge, never leads or
+     * conversations) whenever the bundled dataset is newer than the database.
+     * Every fact below is branch data — Java code contains none of it.
+     */
+    private static final String DATASET_VERSION = "whitefield-v2";
+
     private void seedWhitefield() {
         Long branchId;
         try {
@@ -59,43 +69,90 @@ public class AiChatSchemaMigration implements CommandLineRunner {
         } catch (Exception e) {
             return;
         }
-        if (branchId == null || jdbc.queryForObject("SELECT COUNT(*) FROM ai_classes WHERE branch_id = ?", Long.class, branchId) > 0) return;
+        if (branchId == null) return;
+        String current = null;
+        try {
+            current = jdbc.queryForObject(
+                "SELECT setting_value FROM ai_studio_settings WHERE tenant_id = 'default' AND branch_id = ? AND setting_key = 'dataset_version'",
+                String.class, branchId);
+        } catch (Exception e) {
+            current = null;
+        }
+        if (DATASET_VERSION.equals(current)) return;
 
-        jdbc.update("INSERT INTO ai_classes (branch_id, name, category, min_age, max_age, experience_level, description, active) VALUES (?, 'Kids Dance Batch', 'KIDS', 4, 12, 'BEGINNER', 'Fun foundational batches for children covering Bollywood, hip-hop basics and stage confidence.', TRUE)", branchId);
-        jdbc.update("INSERT INTO ai_classes (branch_id, name, category, min_age, max_age, experience_level, description, active) VALUES (?, 'Adult Dance Batch', 'ADULT', 13, NULL, 'ALL', 'Evening batches for teens and adults across Bollywood, hip-hop and contemporary styles.', TRUE)", branchId);
-        jdbc.update("INSERT INTO ai_classes (branch_id, name, category, min_age, max_age, experience_level, description, active) VALUES (?, 'Bharatanatyam', 'BHARATANATYAM', 5, NULL, 'ALL', 'Classical Bharatanatyam training from adavus to stage-ready margam pieces.', TRUE)", branchId);
-        jdbc.update("INSERT INTO ai_classes (branch_id, name, category, min_age, max_age, experience_level, description, active) VALUES (?, 'Contemporary & Freestyle', 'ADULT', 10, NULL, 'INTERMEDIATE', 'Contemporary technique and freestyle expression for dancers with some prior training.', TRUE)", branchId);
+        // Replace AI knowledge for this branch only. Leads, conversations, messages
+        // and audit rows are user data and are never touched.
+        jdbc.update("DELETE FROM ai_class_schedules WHERE branch_id = ?", branchId);
+        jdbc.update("DELETE FROM ai_classes WHERE branch_id = ?", branchId);
+        jdbc.update("DELETE FROM ai_packages WHERE branch_id = ?", branchId);
+        jdbc.update("DELETE FROM ai_chat_faqs WHERE branch_id = ?", branchId);
+        jdbc.update("DELETE FROM ai_chat_policies WHERE branch_id = ?", branchId);
+        jdbc.update("DELETE FROM ai_chat_offers WHERE branch_id = ?", branchId);
+        jdbc.update("DELETE FROM ai_studio_settings WHERE branch_id = ?", branchId);
 
-        seedSchedule(branchId, "Kids Dance Batch", "Saturday", "10:00", "11:00", "Kids Morning Batch");
-        seedSchedule(branchId, "Kids Dance Batch", "Sunday", "10:00", "11:00", "Kids Morning Batch");
-        seedSchedule(branchId, "Adult Dance Batch", "Monday", "19:00", "20:00", "Adults Evening Batch");
-        seedSchedule(branchId, "Adult Dance Batch", "Wednesday", "19:00", "20:00", "Adults Evening Batch");
-        seedSchedule(branchId, "Bharatanatyam", "Tuesday", "17:00", "18:00", "Classical Evening Batch");
-        seedSchedule(branchId, "Bharatanatyam", "Thursday", "17:00", "18:00", "Classical Evening Batch");
-        seedSchedule(branchId, "Contemporary & Freestyle", "Friday", "19:00", "20:00", "Contemporary Batch");
+        seedClass(branchId, "Sub Juniors", "KIDS", 3, 5, "BEGINNER", 2500,
+            "For tiny stars taking their first dance steps. Fun-filled sessions focused on rhythm, coordination and stage confidence.");
+        seedClass(branchId, "Juniors", "KIDS", 6, 8, "BEGINNER", 2500,
+            "For young movers ready to level up their skills, focusing on technique, musicality and stage performance.");
+        seedClass(branchId, "Level 1 Kids", "KIDS", 9, 12, "BEGINNER", 2500,
+            "A specially designed batch where kids are introduced to various dance styles and basic techniques. The class focuses on improving skills, rhythm and confidence in a fun and supportive environment.");
+        seedClass(branchId, "Level 2 Kids", "KIDS", 13, 15, "INTERMEDIATE", 2500,
+            "A high-energy batch for kids ready to take their dancing to the next level, with faster movements, choreography, sharper techniques, rhythm, confidence and stage presence.");
+        seedClass(branchId, "Freestyle Adults Beginners", "ADULT", 16, null, "BEGINNER", 2500,
+            "Discover different dance styles and progress from beginner to confident dancer. Build confidence, improve fitness and express yourself freely. No prior experience is required.");
+        seedClass(branchId, "Level 1 Adults", "ADULT", 16, null, "INTERMEDIATE", 2500,
+            "A progression from freestyle for dancers ready to step up their skills, focusing on sharper techniques, complex routines and stage-ready confidence.");
+        seedClass(branchId, "Bharatanatyam", "BHARATANATYAM", null, null, "ALL", 2500,
+            "A graceful classical dance form that combines rhythm, expression and tradition. Suitable for people looking to connect with culture and learn storytelling through movement.");
 
-        jdbc.update("INSERT INTO ai_packages (branch_id, name, duration_months, fee_amount, admission_fee, description, active) VALUES (?, 'Kids Monthly', 1, 2500, 1000, 'One month of weekend Kids Dance Batch sessions.', TRUE)", branchId);
-        jdbc.update("INSERT INTO ai_packages (branch_id, name, duration_months, fee_amount, admission_fee, description, active) VALUES (?, 'Adult Monthly', 1, 2700, 1000, 'One month of evening Adult Dance Batch sessions.', TRUE)", branchId);
-        jdbc.update("INSERT INTO ai_packages (branch_id, name, duration_months, fee_amount, admission_fee, description, active) VALUES (?, 'Bharatanatyam Quarterly', 3, 7000, 1000, 'Three months of classical Bharatanatyam training.', TRUE)", branchId);
+        seedSchedule(branchId, "Sub Juniors", "Monday", "4:30 PM", "5:30 PM", "Sub Juniors");
+        seedSchedule(branchId, "Sub Juniors", "Wednesday", "4:30 PM", "5:30 PM", "Sub Juniors");
+        seedSchedule(branchId, "Sub Juniors", "Friday", "4:30 PM", "5:30 PM", "Sub Juniors");
+        seedSchedule(branchId, "Juniors", "Monday", "5:30 PM", "6:30 PM", "Juniors");
+        seedSchedule(branchId, "Juniors", "Wednesday", "5:30 PM", "6:30 PM", "Juniors");
+        seedSchedule(branchId, "Juniors", "Friday", "5:30 PM", "6:30 PM", "Juniors");
+        seedSchedule(branchId, "Level 1 Kids", "Monday", "6:30 PM", "7:30 PM", "Level 1 Kids");
+        seedSchedule(branchId, "Level 1 Kids", "Wednesday", "6:30 PM", "7:30 PM", "Level 1 Kids");
+        seedSchedule(branchId, "Level 1 Kids", "Friday", "6:30 PM", "7:30 PM", "Level 1 Kids");
+        seedSchedule(branchId, "Level 2 Kids", "Tuesday", "5:00 PM", "6:30 PM", "Level 2 Kids");
+        seedSchedule(branchId, "Level 2 Kids", "Thursday", "5:00 PM", "6:30 PM", "Level 2 Kids");
+        seedSchedule(branchId, "Freestyle Adults Beginners", "Monday", "7:30 PM", "8:30 PM", "Freestyle Adults Beginners");
+        seedSchedule(branchId, "Freestyle Adults Beginners", "Wednesday", "7:30 PM", "8:30 PM", "Freestyle Adults Beginners");
+        seedSchedule(branchId, "Level 1 Adults", "Thursday", "7:30 PM", "8:30 PM", "Level 1 Adults");
+        seedSchedule(branchId, "Level 1 Adults", "Friday", "7:30 PM", "8:30 PM", "Level 1 Adults");
+        seedSchedule(branchId, "Bharatanatyam", "Saturday", "2:30 PM", "3:30 PM", "Bharatanatyam");
+        seedSchedule(branchId, "Bharatanatyam", "Sunday", "9:00 AM", "10:00 AM", "Bharatanatyam");
 
-        setting(branchId, "admission_fee", "1000");
+        jdbc.update("INSERT INTO ai_packages (branch_id, name, duration_months, fee_amount, description, active) VALUES (?, '1 Month', 1, 2500, 'Monthly package.', TRUE)", branchId);
+        jdbc.update("INSERT INTO ai_packages (branch_id, name, duration_months, fee_amount, description, active) VALUES (?, '3 Months', 3, 6750, '10% OFF.', TRUE)", branchId);
+        jdbc.update("INSERT INTO ai_packages (branch_id, name, duration_months, fee_amount, description, active) VALUES (?, '6 Months', 6, 13005, '15% OFF.', TRUE)", branchId);
+        jdbc.update("INSERT INTO ai_packages (branch_id, name, duration_months, fee_amount, description, active) VALUES (?, '12 Months', 12, 23040, '20% OFF.', TRUE)", branchId);
+
+        setting(branchId, "admission_fee", "500");
+        setting(branchId, "currency", "INR");
         setting(branchId, "contact_phone", "9731067867");
-        setting(branchId, "trial_info", "New students can book one trial class before enrolling. Ask the studio team to schedule it.");
-        setting(branchId, "branch_address", "Dance7 Whitefield — please confirm the exact studio address with the front desk when you call.");
-        setting(branchId, "unknown_info_template", "I don''t have that information for the {branch} branch yet. Please contact the studio at {phone}.");
+        setting(branchId, "trial_info", "I don''t have the current trial-class policy in my available Whitefield branch information. Please contact the branch at 9731067867 for the latest details.");
+        setting(branchId, "enrollment_info", "To complete your enrollment, please contact the Whitefield branch at 9731067867.");
+        setting(branchId, "unknown_info_template", "I don''t have that information for the {branch} branch yet.");
+        setting(branchId, "dataset_version", DATASET_VERSION);
 
-        faq(branchId, "What are the fees and packages?", "Our current Whitefield packages: Kids Monthly ₹2500, Adult Monthly ₹2700, Bharatanatyam Quarterly ₹7000, plus a one-time admission fee of ₹1000. The front-desk team can confirm the latest offers.", "fees,fee,price,cost,package,charges,admission fee", 1);
-        faq(branchId, "What are the class timings?", "Kids Dance Batch runs Sat–Sun 10:00–11:00, Adult Dance Batch Mon & Wed 19:00–20:00, Bharatanatyam Tue & Thu 17:00–18:00, Contemporary Friday 19:00–20:00. Timings can change, so confirm your batch with the studio.", "timing,timings,schedule,when,batch time,class time", 2);
-        faq(branchId, "Is there a trial class?", "Yes — new students can book one trial class before enrolling. Share your details and we will arrange it with the studio team.", "trial,demo,free class,try", 3);
-        faq(branchId, "How do I contact the Whitefield studio?", "You can reach the Whitefield studio at 9731067867. Share your details here and our team will also call you back.", "contact,phone,number,call,address,where,location", 4);
-        faq(branchId, "Do you have classes for kids?", "Yes — our Kids Dance Batch (ages 4–12, beginner friendly) runs every Saturday and Sunday 10:00–11:00.", "kids,children,child,age 5,age 6,junior", 5);
-        faq(branchId, "Do you teach Bharatanatyam?", "Yes — classical Bharatanatyam training from adavus to stage pieces, every Tuesday and Thursday 17:00–18:00, open to ages 5+.", "bharatanatyam,classical", 6);
+        faq(branchId, "What are the fees and packages?", "Whitefield packages: 1 Month \u20B92,500; 3 Months \u20B96,750 (10% OFF); 6 Months \u20B913,005 (15% OFF); 12 Months \u20B923,040 (20% OFF). One-time admission fee: \u20B9500.", "fees,fee,price,cost,package,charges,admission fee", 1);
+        faq(branchId, "What are the class timings?", "Sub Juniors (3-5 yrs): Mon, Wed, Fri 4:30-5:30 PM. Juniors (6-8 yrs): Mon, Wed, Fri 5:30-6:30 PM. Level 1 Kids (9-12 yrs): Mon, Wed, Fri 6:30-7:30 PM. Level 2 Kids (13-15 yrs): Tue, Thu 5:00-6:30 PM. Freestyle Adults Beginners: Mon, Wed 7:30-8:30 PM. Level 1 Adults: Thu, Fri 7:30-8:30 PM. Bharatanatyam: Sat 2:30-3:30 PM, Sun 9:00-10:00 AM.", "timing,timings,schedule,when,batch time,class time", 2);
+        faq(branchId, "How much is admission?", "The one-time admission fee is \u20B9500.", "admission,admission fee,joining fee,enrollment fee", 3);
+        faq(branchId, "Do you have classes for kids?", "Yes - Sub Juniors (3-5 yrs), Juniors (6-8 yrs), Level 1 Kids (9-12 yrs) and Level 2 Kids (13-15 yrs), each \u20B92,500. Tell me the child''s age and I will point you to the right batch.", "kids,children,child,junior", 4);
+        faq(branchId, "Do you teach Bharatanatyam?", "Yes - Bharatanatyam for all age groups, every Saturday 2:30-3:30 PM and Sunday 9:00-10:00 AM, \u20B92,500.", "bharatanatyam,classical", 5);
+        faq(branchId, "Do you have a trial class?", "I don''t have the current trial-class policy in my available Whitefield branch information. Please contact the branch at 9731067867 for the latest details.", "trial,demo,free class,try", 6);
+        faq(branchId, "How do I contact the Whitefield studio?", "You can reach the Dance7 Whitefield branch at 9731067867. Share your details here and our team will also call you back.", "contact,phone,number,call,where,location", 7);
+        faq(branchId, "How do I join or enroll?", "Pick your batch, then share your details so the studio team can confirm your enrollment. To complete your enrollment, please contact the Whitefield branch at 9731067867.", "join,enroll,enrol,register,registration,admission,sign up", 8);
 
-        jdbc.update("INSERT INTO ai_chat_policies (branch_id, title, body, category, active) VALUES (?, 'Admission policy', 'Admission is confirmed after the admission fee and first package fee are paid. A free trial class can be taken before enrolling.', 'ADMISSION', TRUE)", branchId);
-        jdbc.update("INSERT INTO ai_chat_policies (branch_id, title, body, category, active) VALUES (?, 'Fee and refund policy', 'Fees are charged per package cycle. Refunds are handled case-by-case by the branch manager; please contact the studio for assistance.', 'FEES', TRUE)", branchId);
-        jdbc.update("INSERT INTO ai_chat_policies (branch_id, title, body, category, active) VALUES (?, 'Attendance policy', 'Students should attend their assigned batch slots. Missed classes are not automatically adjusted; speak to your instructor about catch-up options.', 'ATTENDANCE', TRUE)", branchId);
+        jdbc.update("INSERT INTO ai_chat_policies (branch_id, title, body, category, active) VALUES (?, 'Admission policy', 'Admission needs a one-time admission fee of \u20B9500 plus the chosen package fee. Enrollment is confirmed by the studio team - the assistant itself never enrolls students.', 'ADMISSION', TRUE)", branchId);
+        jdbc.update("INSERT INTO ai_chat_policies (branch_id, title, body, category, active) VALUES (?, 'Unlisted policies', 'Refund, makeup-class, holiday, capacity, payment-method, tax, document, uniform and parking policies are not published here. Please contact the Whitefield branch at 9731067867 for the latest details.', 'GENERAL', TRUE)", branchId);
+    }
 
-        jdbc.update("INSERT INTO ai_chat_offers (branch_id, title, body, valid_from, valid_until, active) VALUES (?, 'Welcome offer', 'New Whitefield admissions this season get priority batch choice plus a free trial class. Ask the front desk to apply it at enrollment.', DATE '2026-01-01', DATE '2027-12-31', TRUE)", branchId);
+    private void seedClass(Long branchId, String name, String category, Integer minAge, Integer maxAge,
+        String level, int fee, String description) {
+        jdbc.update("INSERT INTO ai_classes (branch_id, name, category, min_age, max_age, experience_level, fee_amount, description, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)",
+            branchId, name, category, minAge, maxAge, level, fee, description);
     }
 
     private void seedSchedule(Long branchId, String className, String day, String start, String end, String batch) {

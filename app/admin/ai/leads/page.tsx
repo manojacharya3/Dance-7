@@ -19,7 +19,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-const STATUSES = ["ALL", "NEW", "CONTACTED", "ENROLLED", "CLOSED"];
+const STATUSES = ["ALL", "NEW", "CONTACTED", "TRIAL", "ENROLLED", "LOST"];
 
 export default function AiLeadsPage() {
   const [branches, setBranches] = useState<BranchOption[]>([]);
@@ -111,7 +111,7 @@ export default function AiLeadsPage() {
                 ))}
               </dl>
               <div className="mt-4 flex flex-wrap gap-2">
-                {["CONTACTED", "ENROLLED", "CLOSED"].filter((s) => s !== lead.status).map((s) => (
+                {["CONTACTED", "TRIAL", "ENROLLED", "LOST"].filter((s) => s !== lead.status).map((s) => (
                   <button key={s} disabled={updating === lead.id} onClick={() => setLeadStatus(lead.id, s)} className="d7-btn-secondary !px-3 !py-1.5 !text-xs">
                     {updating === lead.id ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Mark {s}
                   </button>
