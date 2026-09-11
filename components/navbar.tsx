@@ -5,6 +5,7 @@ import { Bell, LogOut, Menu, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { currentUser, logout, type AuthUser } from "@/lib/auth";
+import { getBranches, type Branch } from "@/lib/branches";
 import { visibleNavItems } from "@/components/sidebar";
 
 const TITLES: Record<string, string> = {
@@ -27,9 +28,12 @@ export function Navbar() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [workspace, setWorkspace] = useState("");
 
   useEffect(() => {
     currentUser().then(setUser).catch(() => undefined);
+    getBranches().then(setBranches).catch(() => undefined);
   }, []);
   useEffect(() => {
     setMenuOpen(false);
@@ -108,6 +112,24 @@ export function Navbar() {
               <button aria-label="Close navigation menu" onClick={() => setMenuOpen(false)} className="d7-icon-btn">
                 <X size={19} />
               </button>
+            </div>
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-2 pl-3">
+              <label className="mb-1 block px-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Workspace
+              </label>
+              <select
+                aria-label="Switch workspace branch"
+                value={workspace}
+                onChange={(e) => setWorkspace(e.target.value)}
+                className="w-full bg-transparent text-sm font-semibold text-slate-800 outline-none"
+              >
+                <option value="">All branches</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <nav className="flex-1 space-y-1 overflow-y-auto">
               {items.map(({ label, href, icon: Icon }) => {
