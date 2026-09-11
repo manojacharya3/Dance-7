@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { currentUser, type AuthUser } from "@/lib/auth";
 
-const items = [
+export type NavItem = { label: string; href: string; icon: typeof Home };
+
+export const navItems: NavItem[] = [
   { label: "Overview", href: "/dashboard", icon: Home },
   { label: "Students", href: "/students", icon: UserRound },
   { label: "Attendance", href: "/attendance", icon: CalendarCheck },
@@ -20,15 +22,23 @@ const items = [
   { label: "Administration / Users", href: "/admin/users", icon: UsersRound },
 ];
 
+export function normalizeRoles(roles: string[] | undefined): string[] {
+  return (roles ?? []).map((role) => role.toUpperCase().replace(/^ROLE_/, ""));
+}
+
+export function visibleNavItems(user: AuthUser | null): NavItem[] {
+  const roles = normalizeRoles(user?.roles);
+  const isOwner = user?.email.toLowerCase() === "owner@dance7.com" || roles.includes("ADMIN") || roles.includes("OWNER");
+  const isInstructor = roles.includes("INSTRUCTOR");
+  const isDeveloper = roles.includes("DEVELOPER");
+  return navItems.filter((item) => { if (item.href === "/admin/users") return Boolean(isOwner || isDeveloper); if (isDeveloper) return ["/dashboard", "/students", "/instructors", "/batches", "/memberships", "/payments", "/invoices", "/reminders", "/feedback", "/admin/users"].includes(item.href); if (isInstructor) return ["/dashboard", "/students", "/attendance", "/batches", "/feedback"].includes(item.href); return true; });
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
   useEffect(() => { currentUser().then(setUser).catch(() => undefined); }, []);
-  const roles = user?.roles.map((role) => role.toUpperCase().replace(/^ROLE_/, "")) || [];
-  const isOwner = user?.email.toLowerCase() === "owner@dance7.com" || roles.includes("ADMIN") || roles.includes("OWNER");
-  const isInstructor = roles.includes("INSTRUCTOR");
-  const isDeveloper = roles.includes("DEVELOPER");
-  const visibleItems = items.filter((item) => { if (item.href === "/admin/users") return Boolean(isOwner || isDeveloper); if (isDeveloper) return ["/dashboard", "/students", "/instructors", "/batches", "/memberships", "/payments", "/invoices", "/reminders", "/feedback", "/admin/users"].includes(item.href); if (isInstructor) return ["/dashboard", "/students", "/attendance", "/batches", "/feedback"].includes(item.href); return true; });
+  const visibleItems = visibleNavItems(user);
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col bg-[#18232b] px-5 py-6 text-white lg:flex">
       <Link href="/dashboard" className="mb-12 flex items-center gap-3 px-2">
