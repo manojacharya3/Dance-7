@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CalendarCheck, CreditCard, FileText, Home, MessageSquarePlus, Receipt, UserRound, UsersRound } from "lucide-react";
+import { BadgeIndianRupee, Bell, CalendarCheck, CreditCard, FileText, Home, MessageSquarePlus, UserRound, UsersRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { currentUser, type AuthUser } from "@/lib/auth";
@@ -13,7 +13,7 @@ const items = [
   { label: "Instructors", href: "/instructors", icon: UsersRound },
   { label: "Batches", href: "/batches", icon: CalendarCheck },
   { label: "Memberships", href: "/memberships", icon: CreditCard },
-  { label: "Payments", href: "/payments", icon: Receipt },
+  { label: "Payments", href: "/payments", icon: BadgeIndianRupee },
   { label: "Invoices", href: "/invoices", icon: FileText },
   { label: "Reminders", href: "/reminders", icon: Bell },
   { label: "Feedback", href: "/feedback", icon: MessageSquarePlus },
