@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class AiChatService {
+    private static final Logger log = LoggerFactory.getLogger(AiChatService.class);
     private static final Pattern AGE = Pattern.compile("(\\d{1,2})\\s*(?:years? old|year old|yrs? old|y\\.o\\.|years?)");
     private static final Pattern AGE_PLAIN = Pattern.compile("\\bage\\s*(\\d{1,2})\\b");
 
@@ -62,6 +65,7 @@ public class AiChatService {
         }
         Branch branch = ctx.resolve(tenant, req.branch());
         if (guard.looksLikeInjection(clean)) {
+            log.warn("Dance7 chat injection blocked (branch={}, convo={}).", branch.getName(), req.conversationId());
             guard.audit(tenant, branch.getId(), req.conversationId(), "PROMPT_INJECTION_BLOCKED", "marker matched", ipHash);
             AiChatConversation convo = loadOrCreate(tenant, branch, req.conversationId(), req.visitorId());
             String refusal = "I can help with classes, timings, fees and admissions at Dance7 "
@@ -71,39 +75,102 @@ public class AiChatService {
             return new ChatMessageResponse(convo.getId(), convo.getVisitorId(), refusal, "BLOCKED", false, defaults(), List.of());
         }
 
-        AiChatConversation convo = loadOrCreate(tenant, branch, req.conversationId(), req.visitorId());
-        String intent = detectIntent(clean);
-        boolean leadSignal = isLeadSignal(clean, intent);
-
-        List<RecommendedClassDto> recs = List.of();
-        if ("RECOMMEND".equals(intent)) {
-            recs = recommender.recommend(tenant, String.valueOf(branch.getId()),
-                extractAge(clean), extractLevel(clean), clean);
+        long started = System.currentTimeMillis();
+        AiChatConversation convo;
+        try {
+            convo = loadOrCreate(tenant, branch, req.conversationId(), req.visitorId());
+        } catch (EntityNotFoundException | SecurityException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            // Storage unavailable but branch is known: degrade instead of failing the request.
+            log.error("Dance7 chat conversation unavailable (branch={}).", branch.getName(), e);
+            guard.audit(tenant, branch.getId(), null, "CHAT_STORAGE_UNAVAILABLE", e.getClass().getSimpleName(), ipHash);
+            return fallbackResponse(tenant, branch, null,
+                req.visitorId() != null && !req.visitorId().isBlank() ? req.visitorId() : UUID.randomUUID().toString());
         }
-        List<Map<String, String>> hits = retrieval.searchKnowledgeBase(tenant, branch.getId(), clean, 3);
-        List<ChatTurn> history = messages.findByConversationIdOrderByCreatedAtAscIdAsc(convo.getId()).stream()
-            .skip(Math.max(0, messages.countByConversationId(convo.getId()) - 6))
-            .map(m -> new ChatTurn(m.getRole(), m.getContent())).toList();
 
-        FactPack facts = new FactPack(tenant, branch.getId(), branch.getName(), clean, intent,
-            retrieval.getBranchDetails(tenant, String.valueOf(branch.getId())),
-            needsPackages(intent) ? retrieval.getPackages(tenant, branch.getId()) : List.of(),
-            needsPackages(intent) ? retrieval.getAdmissionFee(tenant, branch.getId()) : Map.of(),
-            needsSchedules(intent) ? retrieval.getClassSchedules(tenant, branch.getId(), null) : List.of(),
-            needsClasses(intent) ? retrieval.getClasses(tenant, branch.getId()) : List.of(),
-            List.of(),
-            needsPolicies(intent) ? retrieval.getPolicies(tenant, branch.getId(), null) : List.of(),
-            needsOffers(intent) ? retrieval.getOffers(tenant, branch.getId()) : List.of(),
-            hits, recs, history, leadSignal);
+        try {
+            String intent = detectIntent(clean);
+            boolean leadSignal = isLeadSignal(clean, intent);
 
-        Dance7AiPort provider = llm.getIfAvailable() != null ? llm.getIfAvailable() : ruleBased;
-        AiReply reply = provider.generate(facts);
+            List<RecommendedClassDto> recs = List.of();
+            if ("RECOMMEND".equals(intent)) {
+                recs = recommender.recommend(tenant, String.valueOf(branch.getId()),
+                    extractAge(clean), extractLevel(clean), clean);
+            }
+            List<Map<String, String>> hits = retrieval.searchKnowledgeBase(tenant, branch.getId(), clean, 3);
+            List<ChatTurn> history = messages.findByConversationIdOrderByCreatedAtAscIdAsc(convo.getId()).stream()
+                .skip(Math.max(0, messages.countByConversationId(convo.getId()) - 6))
+                .map(m -> new ChatTurn(m.getRole(), m.getContent())).toList();
 
-        save(convo.getId(), "user", clean, intent, null);
-        save(convo.getId(), "assistant", reply.text(), intent, provider.getClass().getSimpleName());
-        guard.audit(tenant, branch.getId(), convo.getId(), "CHAT_TURN", intent, ipHash);
-        return new ChatMessageResponse(convo.getId(), convo.getVisitorId(), reply.text(), intent,
-            reply.leadPrompt(), defaults(), recs);
+            FactPack facts = new FactPack(tenant, branch.getId(), branch.getName(), clean, intent,
+                retrieval.getBranchDetails(tenant, String.valueOf(branch.getId())),
+                needsPackages(intent) ? retrieval.getPackages(tenant, branch.getId()) : List.of(),
+                needsPackages(intent) ? retrieval.getAdmissionFee(tenant, branch.getId()) : Map.of(),
+                needsSchedules(intent) ? retrieval.getClassSchedules(tenant, branch.getId(), null) : List.of(),
+                needsClasses(intent) ? retrieval.getClasses(tenant, branch.getId()) : List.of(),
+                List.of(),
+                needsPolicies(intent) ? retrieval.getPolicies(tenant, branch.getId(), null) : List.of(),
+                needsOffers(intent) ? retrieval.getOffers(tenant, branch.getId()) : List.of(),
+                hits, recs, history, leadSignal);
+
+            Dance7AiPort provider = llm.getIfAvailable() != null ? llm.getIfAvailable() : ruleBased;
+            AiReply reply = provider.generate(facts);
+            // Last-resort rule-based safety net: if the LLM path ever returns unusable output,
+            // re-verbalize the same facts deterministically instead of failing.
+            if ((reply == null || reply.text() == null || reply.text().isBlank()) && provider != ruleBased) {
+                log.warn("Dance7 LLM provider returned empty output (branch={}); falling back to rule-based.",
+                    branch.getName());
+                reply = ruleBased.generate(facts);
+            }
+
+            save(convo.getId(), "user", clean, intent, null);
+            save(convo.getId(), "assistant", reply.text(), intent, provider.getClass().getSimpleName());
+            guard.audit(tenant, branch.getId(), convo.getId(), "CHAT_TURN", intent, ipHash);
+            log.info("Dance7 chat turn ok (branch={}, intent={}, provider={}, {}ms).",
+                branch.getName(), intent, provider.getClass().getSimpleName(), System.currentTimeMillis() - started);
+            return new ChatMessageResponse(convo.getId(), convo.getVisitorId(), reply.text(), intent,
+                reply.leadPrompt(), defaults(), recs);
+        } catch (IllegalArgumentException | EntityNotFoundException | SecurityException | RateLimitedException e) {
+            // Client/contract errors keep their status codes (400/404/403/429).
+            throw e;
+        } catch (Throwable t) {
+            // Recoverable failure (retrieval/provider/persist): never 502 — return the
+            // graceful fallback as a normal 200 reply and keep the widget usable.
+            log.error("Dance7 chat turn failed (branch={}).", branch.getName(), t);
+            guard.audit(tenant, branch.getId(), convo.getId(), "CHAT_TURN_FAILED", t.getClass().getSimpleName(), ipHash);
+            try {
+                save(convo.getId(), "user", clean, "FALLBACK", null);
+                save(convo.getId(), "assistant", fallbackText(tenant, branch), "FALLBACK", "fallback");
+            } catch (Throwable ignored) {
+                log.warn("Dance7 fallback persist also failed (branch={}).", branch.getName());
+            }
+            return fallbackResponse(tenant, branch, convo.getId(), convo.getVisitorId());
+        }
+    }
+
+    /** Graceful-degradation reply. Phone comes from branch settings — never hardcoded —
+     *  so Whitefield renders the exact approved sentence while other branches stay correct. */
+    static String fallbackReply(String branchName, String phone) {
+        String base = "I'm having trouble retrieving information right now. Please try again shortly or contact the "
+            + branchName + " branch";
+        return phone == null || phone.isBlank() ? base + " — our team will help you right away."
+            : base + " at " + phone + ".";
+    }
+
+    private String fallbackText(String tenant, Branch branch) {
+        String phone = null;
+        try {
+            phone = retrieval.contactPhone(tenant, branch.getId()).orElse(null);
+        } catch (Throwable ignored) {
+            // Settings unreadable — fall back to the branch name only.
+        }
+        return fallbackReply(branch.getName(), phone);
+    }
+
+    private ChatMessageResponse fallbackResponse(String tenant, Branch branch, Long conversationId, String visitorId) {
+        return new ChatMessageResponse(conversationId, visitorId, fallbackText(tenant, branch),
+            "FALLBACK", false, defaults(), List.of());
     }
 
     private AiChatConversation loadOrCreate(String tenant, Branch branch, Long conversationId, String visitorId) {
@@ -141,15 +208,15 @@ public class AiChatService {
         if (t.matches(".*\\b(thank|thanks|shukriya|dhanyavad)\\b.*")) return "THANKS";
         if (t.matches(".*\\b(admission fee|admission fees)\\b.*")) return "ADMISSION_FEE";
         boolean feeWords = t.matches(".*\\b(fee|fees|price|pricing|cost|charges|package|packages)\\b.*");
-        if (!feeWords && t.matches(".*\\b(offer|offers|discount|discounts|promo|deal|deals)\\b.*")) return "OFFER";
-        if (t.matches(".*\\b(fee|fees|price|pricing|cost|charges|package|packages|discount|offer|offers|trial class cost)\\b.*")) return "FEES";
+        if (!feeWords && t.matches(".*\\b(discount|discounts|promo|deal|deals|any offers|special offer)\\b.*")) return "OFFER";
+        if (feeWords || t.matches(".*\\btrial class cost\\b.*")) return "FEES";
         if (t.matches(".*\\b(timing|timings|schedule|when|batch time|class time|days|slot|morning batch|evening batch|weekend)\\b.*")) return "SCHEDULE";
+        if (t.matches(".*\\b(trial|demo|free class)\\b.*")) return "TRIAL";
         if (t.matches(".*\\b(recommend|suggest|which class|best class|my \\d|age \\d|years old|kid|child|beginner|intermediate|advanced|bharatanatyam|hip.?hop|contemporary|bollywood|zumba|freestyle)\\b.*")) return "RECOMMEND";
         if (t.matches(".*\\b(class|classes|course|courses|batches|kathak|ballet|salsa)\\b.*")) return "CLASSES";
-        if (t.matches(".*\\b(contact|phone|number|call|address|where|location|reach)\\b.*")) return "CONTACT";
-        if (t.matches(".*\\b(trial|demo|free class)\\b.*")) return "TRIAL";
-        if (t.matches(".*\\b(policy|policies|refund|cancel|attendance rule|terms)\\b.*")) return "POLICY";
         if (t.matches(".*\\b(enroll|enrol|join|joining|register|registration|admission|admit|sign ?up|interested|book|callback|call me)\\b.*")) return "LEAD";
+        if (t.matches(".*\\b(contact|phone|number|call|address|where|location|reach)\\b.*")) return "CONTACT";
+        if (t.matches(".*\\b(policy|policies|refund|cancel|attendance rule|terms)\\b.*")) return "POLICY";
         return "OTHER";
     }
 

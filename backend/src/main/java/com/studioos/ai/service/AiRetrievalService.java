@@ -21,6 +21,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class AiRetrievalService {
+    private static final Logger log = LoggerFactory.getLogger(AiRetrievalService.class);
     private final AiBranchContext ctx;
     private final AiClassRepository classes;
     private final AiClassScheduleRepository schedules;
@@ -149,8 +152,7 @@ public class AiRetrievalService {
         Branch b = ctx.resolve(tenant, String.valueOf(branchId));
         List<String> tokens = tokens(query);
         if (tokens.isEmpty()) return List.of();
-        List<Scored> scored = new ArrayList<>();
-        for (AiChatFaq f : faqs.findByTenantIdAndBranchIdAndActiveTrueOrderBySortOrderAscIdAsc(b.getTenantId(), b.getId())) {
+        List<Scored> scored = new ArrayList<>();        for (AiChatFaq f : faqs.findByTenantIdAndBranchIdAndActiveTrueOrderBySortOrderAscIdAsc(b.getTenantId(), b.getId())) {
             int score = score(tokens, f.getQuestion(), 3) + score(tokens, f.getKeywords(), 2) + score(tokens, f.getAnswer(), 1);
             if (score > 0) scored.add(new Scored(score, "FAQ", f.getQuestion(), f.getAnswer()));
         }
@@ -166,8 +168,10 @@ public class AiRetrievalService {
             int score = score(tokens, c.getName(), 3) + score(tokens, c.getDescription(), 1);
             if (score > 0) scored.add(new Scored(score, "CLASS", c.getName(), c.getDescription() == null ? "" : c.getDescription()));
         }
-        return scored.stream().sorted(Comparator.comparingInt(Scored::score).reversed()).limit(Math.max(1, Math.min(limit, 5)))
+        List<Map<String, String>> hits = scored.stream().sorted(Comparator.comparingInt(Scored::score).reversed()).limit(Math.max(1, Math.min(limit, 5)))
             .map(s -> Map.of("type", s.type(), "title", s.title(), "text", s.text())).toList();
+        if (hits.isEmpty()) log.debug("Dance7 knowledge search returned no hits (branch={}).", branchId);
+        return hits;
     }
 
     /** Tool helper: contact phone for the unknown-information fallback (DB-driven, never hardcoded). */

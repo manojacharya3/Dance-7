@@ -5,6 +5,12 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/studioos}
     username: ${DATABASE_USERNAME:postgres}
     password: ${DATABASE_PASSWORD:postgres123}
+    hikari:
+      # Fail fast on an unreachable (e.g. cold) database so the chat flow can
+      # degrade to its graceful fallback instead of hanging into a gateway 502.
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:10000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:5000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:600000}
   jpa:
     hibernate:
       ddl-auto: update
@@ -25,6 +31,17 @@ app:
     refresh-token-days: ${REFRESH_TOKEN_DAYS:7}
     cookie-secure: ${COOKIE_SECURE:false}
     debug-user-enabled: ${DEBUG_USER_ENABLED:false}
+
+dance7:
+  ai:
+    # Optional external LLM (OpenAI-compatible). enabled=false (default) keeps the
+    # deterministic rule-based provider serving traffic. Never commit a real key here.
+    enabled: ${DANCE7_AI_ENABLED:false}
+    llm-url: ${DANCE7_AI_LLM_URL:https://api.openai.com/v1}
+    api-key: ${DANCE7_AI_API_KEY:}
+    model: ${DANCE7_AI_MODEL:gpt-4o-mini}
+    connect-timeout-ms: ${DANCE7_AI_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${DANCE7_AI_READ_TIMEOUT_MS:15000}
 
 management:
   endpoints:
