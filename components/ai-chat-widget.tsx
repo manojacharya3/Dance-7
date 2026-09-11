@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Loader2, MessageCircle, Send, Sparkles, User, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { getBranches, sendMessage, submitLead, type BranchOption, type ChatReply } from "@/lib/ai-chat";
 
 type Msg = { role: "user" | "assistant"; text: string };
@@ -17,6 +17,48 @@ const QUICK_ACTIONS: [string, string][] = [
 ];
 
 const VISITOR_KEY = "dance7-ai-visitor";
+
+// Matches URLs and Indian phone numbers (9731067867, 97310 67867, +91 9731067867).
+const LINKABLE = /(https?:\/\/[^\s]+|www\.[^\s]+|(?:\+?91[\s-]?)?\d{5}[\s-]?\d{5})/g;
+
+/**
+ * Renders chat text with tappable links. iPad/iOS Chrome does not auto-link
+ * phone numbers inside web content (and Safari data detectors are unreliable
+ * here), so contact numbers and URLs are explicit <a> elements: tel: for
+ * phone numbers, target=_blank + noopener/noreferrer for web links.
+ * XSS-safe: React elements only, no dangerouslySetInnerHTML.
+ */
+function renderRichText(text: string, role: "user" | "assistant"): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  LINKABLE.lastIndex = 0;
+  while ((match = LINKABLE.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    const token = match[0];
+    if (/^https?:\/\//i.test(token) || /^www\./i.test(token)) {
+      const href = /^www\./i.test(token) ? `https://${token}` : token;
+      parts.push(
+        <a key={parts.length} href={href} target="_blank" rel="noopener noreferrer"
+          className="font-bold text-[#ff8080] underline underline-offset-2">
+          {token}
+        </a>
+      );
+    } else {
+      const digits = token.replace(/\D/g, "");
+      const tel = digits.length === 10 ? `+91${digits}` : digits.startsWith("91") ? `+${digits}` : digits;
+      parts.push(
+        <a key={parts.length} href={`tel:${tel}`}
+          className={`font-bold underline underline-offset-2 ${role === "user" ? "text-white" : "text-[#ff8080]"}`}>
+          {token}
+        </a>
+      );
+    }
+    last = match.index + token.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
 
 export function AiChatWidget() {
   const [open, setOpen] = useState(false);
@@ -165,7 +207,7 @@ export function AiChatWidget() {
                       : "rounded-bl-md border border-[#2a2a2a] bg-[#161616] text-[#e5e5e5]"
                   }`}
                 >
-                  {m.text}
+                  {renderRichText(m.text, m.role)}
                 </p>
                 {m.role === "user" && (
                   <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-[#b3b3b3]">

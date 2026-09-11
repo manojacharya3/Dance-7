@@ -66,6 +66,8 @@ body::before {
 #__next, body > * { position: relative; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
+/* iPad/iOS: instant taps (no double-tap-zoom delay) + visible tap feedback. */
+a, button { touch-action: manipulation; -webkit-tap-highlight-color: rgba(255, 26, 26, 0.25); }
 select option { background: #1a1a1a; color: #fff; }
 ::selection { background: rgba(255, 26, 26, 0.4); }
 :focus-visible { outline: 2px solid #ff1a1a; outline-offset: 2px; border-radius: 6px; }
