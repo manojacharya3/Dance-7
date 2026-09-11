@@ -1,6 +1,8 @@
 package com.studioos.ai.config;
 
 import javax.sql.DataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Order(2)
 public class AiChatSchemaMigration implements CommandLineRunner {
+    private static final Logger log = LoggerFactory.getLogger(AiChatSchemaMigration.class);
     private final JdbcTemplate jdbc;
 
     public AiChatSchemaMigration(DataSource dataSource) { this.jdbc = new JdbcTemplate(dataSource); }
@@ -32,8 +35,19 @@ public class AiChatSchemaMigration implements CommandLineRunner {
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_chat_policies (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, title VARCHAR(200) NOT NULL, body VARCHAR(4000) NOT NULL, category VARCHAR(80), active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_chat_offers (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT NOT NULL, title VARCHAR(200) NOT NULL, body VARCHAR(4000) NOT NULL, valid_from DATE, valid_until DATE, active BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
         jdbc.execute("CREATE TABLE IF NOT EXISTS ai_chat_audit (id BIGSERIAL PRIMARY KEY, tenant_id VARCHAR(100) NOT NULL DEFAULT 'default', branch_id BIGINT, conversation_id BIGINT, event VARCHAR(60) NOT NULL, detail VARCHAR(500), ip_hash VARCHAR(128), created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        // The ON CONFLICT seed below needs this constraint even when Hibernate
+        // (ddl-auto:update) created the table first without it — otherwise Postgres
+        // raises 42P10, the runner throws, Spring Boot fails to start, and the
+        // platform proxy returns 502 "Application failed to respond" for everything.
+        jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_ai_studio_settings_tenant_branch_key ON ai_studio_settings (tenant_id, branch_id, setting_key)");
 
-        seedWhitefield();
+        try {
+            seedWhitefield();
+        } catch (Exception e) {
+            // Seed data must never prevent boot: the chat degrades gracefully and
+            // knowledge can be entered via admin CRUD.
+            log.error("Dance7 AI seed failed; continuing boot without seed data.", e);
+        }
     }
 
     private void seedWhitefield() {

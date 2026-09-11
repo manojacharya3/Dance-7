@@ -65,6 +65,29 @@ call) and any JPA turn during a Neon cold start (unbounded pool wait).
   contract errors → 400/404/403/429; nothing in the chat path can hold a request
   past ~25 s (LLM 20 s + DB 10 s worst case), inside gateway budgets.
 
+## Follow-up: login 502 "Application failed to respond" (same incident class)
+
+A fast (~834 ms) 502 with Railway's "Application failed to respond" body means the
+**backend container itself is not accepting connections** (crashed / crash-looping),
+not a slow chat turn. Prime suspect found in this repo's own AI migration:
+
+- `AiChatSchemaMigration.seedWhitefield()` used
+  `ON CONFLICT (tenant_id, branch_id, setting_key)` while relying on the inline
+  `UNIQUE` in `CREATE TABLE IF NOT EXISTS`. On first production boot, Hibernate
+  (`ddl-auto:update`) creates `ai_studio_settings` **without** that constraint, the
+  `CREATE TABLE` becomes a no-op, and Postgres raises **42P10 (no matching
+  constraint)** → `CommandLineRunner` throws → Spring Boot fails to start →
+  Railway proxy returns 502 for **every** endpoint (login and chat alike).
+
+Fixed: migration now creates `uq_ai_studio_settings_tenant_branch_key` explicitly
+before seeding, and the seed runs inside try/catch (seed data can never fail boot;
+chat degrades gracefully, gaps fillable via admin CRUD).
+
+Confirm in Railway Deployments → Logs: look for `42P10` / `ON CONFLICT` before this
+fix; after redeploy, `/api/health` (or `/actuator/health`) should return 200 and
+login/chat recover together. If the container is still unhealthy, check OOM kills
+and Neon connectivity next — the app logs now fail fast with explicit errors.
+
 ## Remaining ops checks (Railway/Vercel, not code)
 
 - Confirm `DANCE7_AI_ENABLED` is `false`/unset unless an LLM key is intentionally
