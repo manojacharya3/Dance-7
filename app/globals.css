@@ -2,24 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ————————————————————————————————
+   Dance7 Design System v2 (Modern SaaS)
+   Principles: clean white, spacious, large type,
+   rounded cards, strong hierarchy, mobile-first.
+———————————————————————————————— */
 :root {
-  --canvas: 42 33% 97%;
-  --ink: 218 28% 16%;
-  --muted: 218 12% 46%;
-  --line: 36 19% 88%;
-  --accent: 163 48% 38%;
+  --canvas: 210 40% 98%;        /* #F8FAFC slate-50 page bg */
+  --surface: 0 0% 100%;         /* #FFFFFF cards */
+  --ink: 222 47% 11%;           /* #0F172A slate-900 */
+  --muted: 215 16% 47%;         /* #64748B slate-500 */
+  --faint: 215 20% 65%;         /* #94A3B8 slate-400 */
+  --line: 214 32% 91%;          /* #E2E8F0 slate-200 */
+  --brand: 262 83% 58%;         /* #7C3AED violet-600 primary */
+  --brand-strong: 263 70% 50%;  /* #6D28D9 violet-700 hover */
+  --brand-soft: 252 100% 95%;   /* #F1EAFE focus ring / tint */
+  --accent: 163 48% 38%;        /* legacy teal (kept for compat) */
   --accent-strong: 163 54% 29%;
+  --success: 160 84% 32%;
+  --warning: 38 92% 42%;
+  --danger: 4 74% 49%;
+
+  --radius-card: 1.25rem;   /* 20px */
+  --radius-input: 0.75rem;  /* 12px */
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --shadow-pop: 0 8px 24px -12px rgba(16, 24, 40, 0.22);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
   background: hsl(var(--canvas));
   color: hsl(var(--ink));
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
 }
 
-button, input { font: inherit; }
+button, input, select, textarea { font: inherit; }
+::selection { background: hsl(var(--brand-soft)); }
 
-::selection { background: hsl(var(--accent) / 0.2); }
+/* ————— Shared component patterns (used across all modules) ————— */
+@layer components {
+  .d7-page { @apply mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8 lg:pt-8; }
+  .d7-page-narrow { @apply mx-auto w-full max-w-3xl px-4 pb-16 pt-6 sm:px-6 lg:pt-8; }
+
+  .d7-eyebrow { @apply text-xs font-bold uppercase tracking-[0.14em] text-violet-600; }
+  .d7-h1 { @apply text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl; }
+  .d7-sub { @apply mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]; }
+
+  .d7-card { @apply rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)] sm:p-6; }
+  .d7-card-hover { @apply transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-pop)]; }
+
+  .d7-btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60; }
+  .d7-btn-primary { @apply d7-btn bg-violet-600 text-white shadow-sm hover:bg-violet-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-violet-200; }
+  .d7-btn-dark { @apply d7-btn bg-slate-900 text-white hover:bg-slate-800; }
+  .d7-btn-secondary { @apply d7-btn border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50; }
+  .d7-btn-ghost { @apply d7-btn text-slate-500 hover:bg-slate-100 hover:text-slate-900; }
+  .d7-btn-danger { @apply d7-btn border border-red-200 bg-red-50 text-red-700 hover:bg-red-100; }
+
+  .d7-input { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100; }
+  .d7-label { @apply mb-1.5 block text-sm font-semibold text-slate-700; }
+  .d7-hint { @apply mt-1.5 text-xs leading-5 text-slate-400; }
+  .d7-error { @apply rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700; }
+  .d7-success { @apply rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm font-medium text-emerald-800; }
+
+  .d7-pill { @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold; }
+  .d7-pill-green { @apply d7-pill bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200; }
+  .d7-pill-red { @apply d7-pill bg-red-50 text-red-700 ring-1 ring-inset ring-red-200; }
+  .d7-pill-amber { @apply d7-pill bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200; }
+  .d7-pill-slate { @apply d7-pill bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200; }
+  .d7-pill-violet { @apply d7-pill bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200; }
+  .d7-pill-blue { @apply d7-pill bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200; }
+
+  .d7-table-wrap { @apply overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-[var(--shadow-card)]; }
+  .d7-table-scroll { @apply overflow-x-auto; }
+  .d7-th { @apply whitespace-nowrap px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400; }
+  .d7-td { @apply whitespace-nowrap px-4 py-3.5 text-sm text-slate-700; }
+  .d7-row { @apply border-t border-slate-100 transition hover:bg-violet-50/40; }
+
+  .d7-filterbar { @apply flex flex-col gap-3 border-b border-slate-100 bg-white p-4 sm:p-5 lg:flex-row lg:items-center; }
+  .d7-icon-btn { @apply rounded-xl p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900; }
+  .d7-avatar { @apply flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-xs font-bold text-white; }
+
+  .d7-skeleton { @apply animate-pulse rounded-xl bg-slate-100; }
+}
+
+/* Thin scrollbars for table areas */
+.d7-table-scroll::-webkit-scrollbar { height: 8px; }
+.d7-table-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
+
+/* Bottom padding so mobile bottom-nav never covers CTAs */
+@media (max-width: 1023px) {
+  .d7-page { padding-bottom: 6.5rem; }
+}

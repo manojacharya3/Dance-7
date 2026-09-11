@@ -3,10 +3,23 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { login } from "@/lib/auth";
 
 export default function LoginPage() {
-  return <Suspense fallback={<main className="flex min-h-screen items-center justify-center bg-[#18232b] px-6 py-12 text-white">Checking your Dance7 session...</main>}><LoginForm /></Suspense>;
+  return (
+    <Suspense fallback={<AuthSplash message="Checking your Dance7 session…" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function AuthSplash({ message }: { message: string }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
+      <p className="text-sm font-medium text-slate-500">{message}</p>
+    </main>
+  );
 }
 
 function LoginForm() {
@@ -32,21 +45,71 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#18232b] px-6 py-12 text-white">
-      <div className="w-full max-w-md">
-        <div className="mb-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#d5f45b] text-sm font-black text-[#18232b]">D7</div>
-          <span className="text-xl font-bold tracking-tight">Dance7</span>
+    <main className="grid min-h-screen bg-white lg:grid-cols-2">
+      {/* Brand panel — light SaaS, not dark */}
+      <div className="relative hidden overflow-hidden bg-gradient-to-br from-violet-700 via-violet-600 to-indigo-600 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-sm font-black text-violet-700">D7</span>
+          <span>
+            <span className="block text-lg font-extrabold tracking-tight">Dance7</span>
+            <span className="block text-xs font-medium text-white/70">The Art Factory</span>
+          </span>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-8 shadow-2xl">
-          <p className="mb-2 text-sm font-medium text-[#d5f45b]">Welcome back</p>
-          <h1 className="mb-8 text-3xl font-semibold tracking-tight">Sign in to your studio.</h1>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <label className="block text-sm text-white/70">Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@studio.com" className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-[#d5f45b]" /></label>
-            <label className="block text-sm text-white/70">Password<input required minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Your password" className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/30 focus:border-[#d5f45b]" /></label>
-            {error && <p className="rounded-lg bg-[#b84639]/20 px-3 py-2 text-sm text-[#ffb8ad]">{error}</p>}
-            <button disabled={submitting} type="submit" className="block w-full rounded-lg bg-[#d5f45b] px-4 py-3 text-center font-semibold text-[#18232b] transition hover:bg-[#e2ff7b] disabled:opacity-60">{submitting ? "Signing in..." : "Continue to Dance7"}</button>
-            <p className="text-center text-sm text-white/60">New to Dance7? <Link href="/register" className="font-semibold text-[#d5f45b] hover:text-white">Create an account</Link></p>
+        <div>
+          <p className="d7-pill mb-5 bg-white/15 text-white ring-white/20">Studio management, simplified</p>
+          <h2 className="max-w-md text-4xl font-extrabold leading-[1.1] tracking-tight xl:text-5xl">
+            Run your entire dance studio from one calm dashboard.
+          </h2>
+          <p className="mt-4 max-w-md text-[15px] leading-7 text-white/80">
+            Students, batches, memberships, payments, attendance and reminders — designed for owners, branch heads and
+            instructors.
+          </p>
+          <div className="mt-8 grid max-w-md grid-cols-3 gap-3">
+            {[
+              ["2k+", "Students"],
+              ["120+", "Batches"],
+              ["99%", "Fee clarity"],
+            ].map(([v, l]) => (
+              <div key={l} className="rounded-2xl bg-white/10 p-4 ring-1 ring-inset ring-white/15">
+                <p className="text-2xl font-extrabold">{v}</p>
+                <p className="text-xs font-medium text-white/70">{l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <p className="flex items-center gap-2 text-xs font-medium text-white/60">
+          <Sparkles size={14} /> Secure workspace · Role-based access · Mobile ready
+        </p>
+      </div>
+
+      {/* Form panel */}
+      <div className="flex items-center justify-center px-5 py-10 sm:px-10">
+        <div className="w-full max-w-md">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-black text-white">D7</span>
+            <span className="text-lg font-extrabold tracking-tight text-slate-900">Dance7</span>
+          </div>
+          <p className="d7-eyebrow">Welcome back</p>
+          <h1 className="d7-h1 mt-2">Sign in to your studio.</h1>
+          <p className="d7-sub">Use your workspace email to continue to Dance7.</p>
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <div>
+              <label htmlFor="email" className="d7-label">Email</label>
+              <input id="email" required type="email" autoComplete="email" value={email}
+                onChange={(e) => setEmail(e.target.value)} placeholder="you@studio.com" className="d7-input" />
+            </div>
+            <div>
+              <label htmlFor="password" className="d7-label">Password</label>
+              <input id="password" required minLength={8} type="password" autoComplete="current-password" value={password}
+                onChange={(e) => setPassword(e.target.value)} placeholder="Your password" className="d7-input" />
+            </div>
+            {error && <p role="alert" className="d7-error">{error}</p>}
+            <button disabled={submitting} type="submit" className="d7-btn-primary w-full !py-3 text-[15px]">
+              {submitting ? (<><Loader2 size={17} className="animate-spin" /> Signing in…</>) : (<>Continue to Dance7 <ArrowRight size={17} /></>)}
+            </button>
+            <p className="text-center text-sm text-slate-500">
+              New to Dance7? <Link href="/register" className="font-bold text-violet-700 hover:text-violet-800">Create an account</Link>
+            </p>
           </form>
         </div>
       </div>

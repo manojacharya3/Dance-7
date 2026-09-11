@@ -22,6 +22,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => { active = false; };
   }, [pathname, protectedPath, router]);
 
-  if (checking) return <div className="flex min-h-screen items-center justify-center bg-[#faf9f6] text-sm text-[#7b8285]">Checking your Dance7 session...</div>;
+  if (checking) return <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">Checking your Dance7 session...</div>;
   return children;
 }

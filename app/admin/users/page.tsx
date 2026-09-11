@@ -156,18 +156,18 @@ export default function UsersAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf9f6]">
+    <div className="min-h-screen">
       <Sidebar />
-      <div className="lg:pl-64">
+      <div className="lg:pl-[272px]">
         <Navbar />
-        <main className="px-6 py-8 lg:px-10">
+        <main className="d7-page">
           <div className="mb-8 flex items-end justify-between">
             <div>
-              <p className="mb-2 text-sm font-semibold text-[#21816b]">
+              <p className="mb-2 text-sm font-semibold text-violet-700">
                 Administration
               </p>
               <h1 className="text-3xl font-semibold">Users</h1>
-              <p className="mt-2 text-sm text-[#7b8285]">
+              <p className="mt-2 text-sm text-slate-500">
                 Manage user access, roles, branches, and instructor links.
               </p>
             </div>
@@ -177,7 +177,7 @@ export default function UsersAdminPage() {
                   setEditing(null);
                   setShowForm(true);
                 }}
-                className="flex items-center gap-2 rounded-lg bg-[#18232b] px-4 py-2.5 text-sm font-semibold text-white"
+                className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white"
               >
                 <Plus size={17} />
                 Create user
@@ -185,7 +185,7 @@ export default function UsersAdminPage() {
             )}
           </div>
           {error && (
-            <p className="mb-6 rounded-lg bg-[#fff0ed] p-4 text-sm text-[#b84639]">
+            <p className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-700">
               {error}
             </p>
           )}
@@ -197,7 +197,7 @@ export default function UsersAdminPage() {
           <div className="mb-4 flex items-center gap-3">
             <label
               htmlFor="user-status-filter"
-              className="text-sm font-medium text-[#5e686e]"
+              className="text-sm font-medium text-slate-700"
             >
               Status
             </label>
@@ -214,9 +214,9 @@ export default function UsersAdminPage() {
               <option value="ALL">All</option>
             </select>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-[#e8e5df] bg-white">
+          <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
             <table className="w-full min-w-[850px] text-left">
-              <thead className="bg-[#fdfcf9] text-xs uppercase tracking-[0.12em] text-[#969d9d]">
+              <thead className="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-400">
                 <tr>
                   <th className="px-5 py-3">Name</th>
                   <th className="px-5 py-3">Email</th>
@@ -228,12 +228,12 @@ export default function UsersAdminPage() {
               </thead>
               <tbody>
                 {visibleUsers.map((user) => (
-                  <tr key={user.id} className="border-t border-[#eeeae3]">
+                  <tr key={user.id} className="border-t border-slate-100">
                     <td className="px-5 py-4 font-semibold">{user.fullName}</td>
                     <td className="px-5 py-4 text-sm">{user.email}</td>
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center gap-1 text-sm">
-                        <Shield size={14} className="text-[#21816b]" />
+                        <Shield size={14} className="text-violet-700" />
                         {user.role}
                       </span>
                     </td>
@@ -246,7 +246,7 @@ export default function UsersAdminPage() {
                     </td>
                     <td className="px-5 py-4">
                       {readOnly ? (
-                        <span className="text-sm text-[#969d9d]">—</span>
+                        <span className="text-sm text-slate-400">—</span>
                       ) : (
                         <div className="flex gap-3">
                           <button
@@ -255,7 +255,7 @@ export default function UsersAdminPage() {
                               setShowForm(true);
                             }}
                             aria-label="Edit user"
-                            className="text-[#21816b]"
+                            className="text-violet-700"
                           >
                             <Pencil size={16} />
                           </button>
@@ -263,7 +263,7 @@ export default function UsersAdminPage() {
                           <button
                             onClick={() => requestDelete(user)}
                             aria-label="Disable user"
-                            className="text-[#b84639]"
+                            className="text-red-700"
                           >
                             <UserX size={16} />
                           </button>
@@ -271,7 +271,7 @@ export default function UsersAdminPage() {
                           <button
                             onClick={() => requestRemove(user)}
                             aria-label="Remove user"
-                            className="text-[#b84639]"
+                            className="text-red-700"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -284,13 +284,13 @@ export default function UsersAdminPage() {
               </tbody>
             </table>
             {!visibleUsers.length && (
-              <p className="p-8 text-center text-sm text-[#7b8285]">
+              <p className="p-8 text-center text-sm text-slate-500">
                 No users match this filter.
               </p>
             )}
           </div>
           {showForm && (
-            <div className="fixed inset-0 z-10 flex items-center justify-center bg-[#18232b]/40 p-6">
+            <div className="fixed inset-0 z-10 flex items-center justify-center bg-violet-600/40 p-6">
               <form
                 onSubmit={save}
                 className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6"
@@ -367,7 +367,7 @@ export default function UsersAdminPage() {
                   >
                     Cancel
                   </button>
-                  <button className="rounded-lg bg-[#18232b] px-4 py-2.5 text-sm font-semibold text-white">
+                  <button className="rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">
                     Save user
                   </button>
                 </div>
@@ -376,7 +376,7 @@ export default function UsersAdminPage() {
           )}
           {confirmUser && (
             <div
-              className="fixed inset-0 z-10 flex items-center justify-center bg-[#18232b]/40 p-6"
+              className="fixed inset-0 z-10 flex items-center justify-center bg-violet-600/40 p-6"
               role="dialog"
               aria-modal="true"
               aria-labelledby="confirm-user-deletion-title"
@@ -388,17 +388,17 @@ export default function UsersAdminPage() {
                 >
                   Confirm User Deletion
                 </h2>
-                <p className="mt-3 text-sm text-[#5e686e]">
+                <p className="mt-3 text-sm text-slate-700">
                   Are you sure you want to delete/disable this user?
                 </p>
-                <div className="mt-4 rounded-lg bg-[#faf9f6] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#969d9d]">
+                <div className="mt-4 rounded-lg bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                     User
                   </p>
                   <p className="mt-1 text-sm font-semibold">
                     {confirmUser.fullName}
                   </p>
-                  <p className="text-sm text-[#5e686e]">{confirmUser.email}</p>
+                  <p className="text-sm text-slate-700">{confirmUser.email}</p>
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
                   <button
@@ -413,7 +413,7 @@ export default function UsersAdminPage() {
                     type="button"
                     onClick={confirmDelete}
                     disabled={deleting}
-                    className="rounded-lg bg-[#b84639] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                    className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                   >
                     {deleting ? "Deleting..." : "Delete User"}
                   </button>
@@ -423,7 +423,7 @@ export default function UsersAdminPage() {
           )}
           {removeUser && (
             <div
-              className="fixed inset-0 z-10 flex items-center justify-center bg-[#18232b]/40 p-6"
+              className="fixed inset-0 z-10 flex items-center justify-center bg-violet-600/40 p-6"
               role="dialog"
               aria-modal="true"
               aria-labelledby="permanently-remove-user-title"
@@ -435,17 +435,17 @@ export default function UsersAdminPage() {
                 >
                   Permanently Remove User
                 </h2>
-                <p className="mt-3 text-sm text-[#5e686e]">
+                <p className="mt-3 text-sm text-slate-700">
                   This action cannot be undone.
                 </p>
-                <div className="mt-4 rounded-lg bg-[#faf9f6] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#969d9d]">
+                <div className="mt-4 rounded-lg bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                     User
                   </p>
                   <p className="mt-1 text-sm font-semibold">
                     {removeUser.fullName}
                   </p>
-                  <p className="text-sm text-[#5e686e]">{removeUser.email}</p>
+                  <p className="text-sm text-slate-700">{removeUser.email}</p>
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
                   <button
@@ -460,7 +460,7 @@ export default function UsersAdminPage() {
                     type="button"
                     onClick={confirmRemove}
                     disabled={removing}
-                    className="rounded-lg bg-[#b84639] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                    className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                   >
                     {removing ? "Removing..." : "Remove User"}
                   </button>
