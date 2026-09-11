@@ -18,6 +18,7 @@ public class RoleScopeFilter extends OncePerRequestFilter {
             String method = request.getMethod();
             boolean readOnly = "GET".equalsIgnoreCase(method)
                 && (path.equals("/api/admin/users")
+                    || path.startsWith("/api/ai/admin")
                     || path.matches("/api/(students|instructors|batches|memberships|payments|invoices|branches|feedback)(/\\d+)?")
                     || path.matches("/api/student-batches/(batch|student)/\\d+")
                     || path.startsWith("/api/attendance"));

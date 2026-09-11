@@ -1,0 +1,192 @@
+package com.studioos.ai.service;
+
+import com.studioos.ai.dto.AiDtos.ChatMessageRequest;
+import com.studioos.ai.dto.AiDtos.ChatMessageResponse;
+import com.studioos.ai.dto.AiDtos.RecommendedClassDto;
+import com.studioos.ai.model.AiChatConversation;
+import com.studioos.ai.model.AiChatMessage;
+import com.studioos.ai.repository.AiChatConversationRepository;
+import com.studioos.ai.repository.AiChatMessageRepository;
+import com.studioos.ai.service.Dance7AiPort.AiReply;
+import com.studioos.ai.service.Dance7AiPort.ChatTurn;
+import com.studioos.ai.service.Dance7AiPort.FactPack;
+import com.studioos.model.Branch;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Chat orchestrator: sanitize → injection screen → branch resolve → rate limit →
+ * conversation load/create (ownership-checked) → intent detect → tool retrieval →
+ * provider verbalization → persist + audit → respond. Branch id threads through
+ * every step; no cross-branch data ever enters the FactPack.
+ */
+@Service
+public class AiChatService {
+    private static final Pattern AGE = Pattern.compile("(\\d{1,2})\\s*(?:years? old|year old|yrs? old|y\\.o\\.|years?)");
+    private static final Pattern AGE_PLAIN = Pattern.compile("\\bage\\s*(\\d{1,2})\\b");
+
+    private final AiBranchContext ctx;
+    private final AiRetrievalService retrieval;
+    private final AiRecommendationService recommender;
+    private final AiChatConversationRepository conversations;
+    private final AiChatMessageRepository messages;
+    private final AiGuard guard;
+    private final Dance7AiPort ruleBased;
+    private final ObjectProvider<HttpLlmAiProvider> llm;
+
+    public AiChatService(AiBranchContext ctx, AiRetrievalService retrieval, AiRecommendationService recommender,
+        AiChatConversationRepository conversations, AiChatMessageRepository messages, AiGuard guard,
+        RuleBasedAiProvider ruleBased, ObjectProvider<HttpLlmAiProvider> llm) {
+        this.ctx = ctx; this.retrieval = retrieval; this.recommender = recommender;
+        this.conversations = conversations; this.messages = messages; this.guard = guard;
+        this.ruleBased = ruleBased; this.llm = llm;
+    }
+
+    @Transactional
+    public ChatMessageResponse message(String tenant, ChatMessageRequest req, HttpServletRequest http) {
+        String clean = guard.sanitize(req.message());
+        if (clean.isEmpty()) throw new IllegalArgumentException("Please type a message.");
+        String ipHash = guard.ipHash(http);
+        if (!guard.allow("chat:" + ipHash)) {
+            guard.audit(tenant, null, null, "RATE_LIMITED", "public chat", ipHash);
+            throw new RateLimitedException();
+        }
+        Branch branch = ctx.resolve(tenant, req.branch());
+        if (guard.looksLikeInjection(clean)) {
+            guard.audit(tenant, branch.getId(), req.conversationId(), "PROMPT_INJECTION_BLOCKED", "marker matched", ipHash);
+            AiChatConversation convo = loadOrCreate(tenant, branch, req.conversationId(), req.visitorId());
+            String refusal = "I can help with classes, timings, fees and admissions at Dance7 "
+                + branch.getName() + ". What would you like to know?";
+            save(convo.getId(), "user", clean, "BLOCKED", null);
+            save(convo.getId(), "assistant", refusal, "BLOCKED", null);
+            return new ChatMessageResponse(convo.getId(), convo.getVisitorId(), refusal, "BLOCKED", false, defaults(), List.of());
+        }
+
+        AiChatConversation convo = loadOrCreate(tenant, branch, req.conversationId(), req.visitorId());
+        String intent = detectIntent(clean);
+        boolean leadSignal = isLeadSignal(clean, intent);
+
+        List<RecommendedClassDto> recs = List.of();
+        if ("RECOMMEND".equals(intent)) {
+            recs = recommender.recommend(tenant, String.valueOf(branch.getId()),
+                extractAge(clean), extractLevel(clean), clean);
+        }
+        List<Map<String, String>> hits = retrieval.searchKnowledgeBase(tenant, branch.getId(), clean, 3);
+        List<ChatTurn> history = messages.findByConversationIdOrderByCreatedAtAscIdAsc(convo.getId()).stream()
+            .skip(Math.max(0, messages.countByConversationId(convo.getId()) - 6))
+            .map(m -> new ChatTurn(m.getRole(), m.getContent())).toList();
+
+        FactPack facts = new FactPack(tenant, branch.getId(), branch.getName(), clean, intent,
+            retrieval.getBranchDetails(tenant, String.valueOf(branch.getId())),
+            needsPackages(intent) ? retrieval.getPackages(tenant, branch.getId()) : List.of(),
+            needsPackages(intent) ? retrieval.getAdmissionFee(tenant, branch.getId()) : Map.of(),
+            needsSchedules(intent) ? retrieval.getClassSchedules(tenant, branch.getId(), null) : List.of(),
+            needsClasses(intent) ? retrieval.getClasses(tenant, branch.getId()) : List.of(),
+            List.of(),
+            needsPolicies(intent) ? retrieval.getPolicies(tenant, branch.getId(), null) : List.of(),
+            needsOffers(intent) ? retrieval.getOffers(tenant, branch.getId()) : List.of(),
+            hits, recs, history, leadSignal);
+
+        Dance7AiPort provider = llm.getIfAvailable() != null ? llm.getIfAvailable() : ruleBased;
+        AiReply reply = provider.generate(facts);
+
+        save(convo.getId(), "user", clean, intent, null);
+        save(convo.getId(), "assistant", reply.text(), intent, provider.getClass().getSimpleName());
+        guard.audit(tenant, branch.getId(), convo.getId(), "CHAT_TURN", intent, ipHash);
+        return new ChatMessageResponse(convo.getId(), convo.getVisitorId(), reply.text(), intent,
+            reply.leadPrompt(), defaults(), recs);
+    }
+
+    private AiChatConversation loadOrCreate(String tenant, Branch branch, Long conversationId, String visitorId) {
+        if (conversationId != null) {
+            AiChatConversation existing = conversations.findByIdAndTenantId(conversationId, branch.getTenantId())
+                .orElseThrow(() -> new EntityNotFoundException("Conversation not found."));
+            if (!existing.getBranchId().equals(branch.getId()))
+                throw new SecurityException("Conversation belongs to another branch.");
+            if (visitorId == null || !visitorId.equals(existing.getVisitorId()))
+                throw new SecurityException("Conversation ownership mismatch.");
+            return existing;
+        }
+        AiChatConversation convo = new AiChatConversation();
+        convo.setTenantId(branch.getTenantId());
+        convo.setBranchId(branch.getId());
+        convo.setVisitorId(visitorId != null && !visitorId.isBlank() ? visitorId : UUID.randomUUID().toString());
+        convo.setChannel("WIDGET");
+        convo.setStatus("OPEN");
+        return conversations.save(convo);
+    }
+
+    private void save(Long conversationId, String role, String content, String intent, String tool) {
+        AiChatMessage m = new AiChatMessage();
+        m.setConversationId(conversationId);
+        m.setRole(role);
+        m.setContent(content.length() > 4000 ? content.substring(0, 4000) : content);
+        m.setIntent(intent);
+        m.setToolName(tool);
+        messages.save(m);
+    }
+
+    static String detectIntent(String text) {
+        String t = " " + text.toLowerCase() + " ";
+        if (t.matches(".*\\b(hi|hii+|hello|hey|namaste|good morning|good afternoon|good evening)\\b.*") && text.length() < 40) return "GREETING";
+        if (t.matches(".*\\b(thank|thanks|shukriya|dhanyavad)\\b.*")) return "THANKS";
+        if (t.matches(".*\\b(admission fee|admission fees)\\b.*")) return "ADMISSION_FEE";
+        boolean feeWords = t.matches(".*\\b(fee|fees|price|pricing|cost|charges|package|packages)\\b.*");
+        if (!feeWords && t.matches(".*\\b(offer|offers|discount|discounts|promo|deal|deals)\\b.*")) return "OFFER";
+        if (t.matches(".*\\b(fee|fees|price|pricing|cost|charges|package|packages|discount|offer|offers|trial class cost)\\b.*")) return "FEES";
+        if (t.matches(".*\\b(timing|timings|schedule|when|batch time|class time|days|slot|morning batch|evening batch|weekend)\\b.*")) return "SCHEDULE";
+        if (t.matches(".*\\b(recommend|suggest|which class|best class|my \\d|age \\d|years old|kid|child|beginner|intermediate|advanced|bharatanatyam|hip.?hop|contemporary|bollywood|zumba|freestyle)\\b.*")) return "RECOMMEND";
+        if (t.matches(".*\\b(class|classes|course|courses|batches|kathak|ballet|salsa)\\b.*")) return "CLASSES";
+        if (t.matches(".*\\b(contact|phone|number|call|address|where|location|reach)\\b.*")) return "CONTACT";
+        if (t.matches(".*\\b(trial|demo|free class)\\b.*")) return "TRIAL";
+        if (t.matches(".*\\b(policy|policies|refund|cancel|attendance rule|terms)\\b.*")) return "POLICY";
+        if (t.matches(".*\\b(enroll|enrol|join|joining|register|registration|admission|admit|sign ?up|interested|book|callback|call me)\\b.*")) return "LEAD";
+        return "OTHER";
+    }
+
+    static boolean isLeadSignal(String text, String intent) {
+        if ("LEAD".equals(intent)) return true;
+        String t = text.toLowerCase();
+        return ("FEES".equals(intent) || "TRIAL".equals(intent) || "RECOMMEND".equals(intent))
+            && t.matches(".*\\b(interested|join|enroll|book|yes|please|call)\\b.*");
+    }
+
+    static Integer extractAge(String text) {
+        Matcher m = AGE.matcher(text.toLowerCase());
+        if (m.find()) return Integer.parseInt(m.group(1));
+        Matcher p = AGE_PLAIN.matcher(text.toLowerCase());
+        if (p.find()) return Integer.parseInt(p.group(1));
+        return null;
+    }
+
+    static String extractLevel(String text) {
+        String t = text.toLowerCase();
+        if (t.contains("beginner") || t.contains("no experience") || t.contains("just start") || t.contains("new to")) return "BEGINNER";
+        if (t.contains("intermediate")) return "INTERMEDIATE";
+        if (t.contains("advanced") || t.contains("experienced")) return "ADVANCED";
+        return null;
+    }
+
+    private boolean needsPackages(String intent) { return List.of("FEES", "ADMISSION_FEE", "LEAD", "OTHER").contains(intent); }
+    private boolean needsSchedules(String intent) { return List.of("SCHEDULE", "CLASSES", "RECOMMEND", "OTHER").contains(intent); }
+    private boolean needsClasses(String intent) { return List.of("CLASSES", "RECOMMEND", "SCHEDULE", "OTHER").contains(intent); }
+    private boolean needsPolicies(String intent) { return List.of("POLICY", "OTHER").contains(intent); }
+    private boolean needsOffers(String intent) { return List.of("OFFER", "FEES", "OTHER").contains(intent); }
+
+    private List<String> defaults() {
+        return List.of("View Classes", "Kids Classes", "Bharatanatyam", "Fees & Packages", "Contact Studio");
+    }
+
+    public static class RateLimitedException extends RuntimeException {
+        public RateLimitedException() { super("Too many messages right now — please wait a few seconds and try again."); }
+    }
+}

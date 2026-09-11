@@ -10,6 +10,7 @@ import {
   Home,
   LayoutGrid,
   MessageSquarePlus,
+  Sparkles,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -33,6 +34,7 @@ export const navItems: NavItem[] = [
   { label: "Invoices", href: "/invoices", icon: FileText, section: "Finance" },
   { label: "Reminders", href: "/reminders", icon: Bell, section: "Finance" },
   { label: "Feedback", href: "/feedback", icon: MessageSquarePlus, section: "System" },
+  { label: "AI Assistant", href: "/admin/ai", icon: Sparkles, section: "System" },
   { label: "Users", href: "/admin/users", icon: UsersRound, section: "System" },
 ];
 
@@ -46,7 +48,7 @@ export function visibleNavItems(user: AuthUser | null): NavItem[] {
   const isInstructor = roles.includes("INSTRUCTOR");
   const isDeveloper = roles.includes("DEVELOPER");
   return navItems.filter((item) => {
-    if (item.href === "/admin/users") return Boolean(isOwner || isDeveloper);
+    if (item.href === "/admin/users" || item.href === "/admin/ai") return Boolean(isOwner || isDeveloper);
     if (isDeveloper)
       return ["/dashboard", "/students", "/instructors", "/batches", "/memberships", "/payments", "/invoices", "/reminders", "/feedback", "/admin/users"].includes(item.href);
     if (isInstructor) return ["/dashboard", "/students", "/attendance", "/batches", "/feedback"].includes(item.href);

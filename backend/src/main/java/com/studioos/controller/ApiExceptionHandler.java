@@ -1,5 +1,6 @@
 package com.studioos.controller;
 
+import com.studioos.ai.service.AiChatService;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,5 +38,15 @@ public class ApiExceptionHandler {
             .map(error -> error.getField() + ": " + error.getDefaultMessage())
             .collect(Collectors.joining("; "));
         return ResponseEntity.badRequest().body(Map.of("error", message));
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(SecurityException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(AiChatService.RateLimitedException.class)
+    public ResponseEntity<Map<String, String>> handleRateLimited(AiChatService.RateLimitedException exception) {
+        return ResponseEntity.status(429).body(Map.of("error", exception.getMessage()));
     }
 }
