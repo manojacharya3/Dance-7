@@ -96,5 +96,5 @@ existing role filters unchanged (webhook explicitly public, signature-gated).
 
 ## 11. Commit / push
 
-- Commit: "Add Razorpay payments with automated invoicing" (see `git log`).
-- Push: `origin/main` (manojacharya3/Dance-7) — synced.
+- Commit: "Add Razorpay payments with automated invoicing" (`5d25414`).
+- Push: `origin/main` (manojacharya3/Dance-7) — ✅ synced.
