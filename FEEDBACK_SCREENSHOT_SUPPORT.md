@@ -73,5 +73,5 @@ Backend: `model/FeedbackAttachment`, `model/Feedback` (categories),
 `resources/application.yml`, `src/test/.../FeedbackAttachmentTest`.
 Frontend: `lib/feedback.ts`, `app/feedback/new/page.tsx`, `app/feedback/page.tsx`.
 
-- Commit: "Add screenshot attachments to feedback system" (see `git log`).
-- Push: `origin/main` (manojacharya3/Dance-7) — synced.
+- Commit: "Add screenshot attachments to feedback system" (`0862a7d`).
+- Push: `origin/main` (manojacharya3/Dance-7) — ✅ synced.
